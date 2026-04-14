@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Flashcard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#fafafa;color:#1a1a2e;font-size:14px;line-height:1.5}
+.app{max-width:520px;margin:0 auto;min-height:100vh;padding:1.25rem}
+.page{display:none}.page.active{display:block}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.75rem}
+.topbar-title{font-size:20px;font-weight:500;color:#1a1a2e}
+.topbar-sub{font-size:13px;color:#888;margin-top:2px}
+.sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ccc;margin-left:8px;vertical-align:middle;transition:background 0.3s}
+.sync-dot.online{background:#3B6D11}.sync-dot.syncing{background:#854F0B}
+.btn{height:36px;padding:0 16px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.12);background:#fff;color:#111;font-size:13px;font-weight:400;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all 0.15s;font-family:inherit;-webkit-user-select:none;user-select:none}
+.btn:hover{background:#f5f5f5}.btn:active{transform:scale(0.98)}
+.btn-filled{background:#1a1a2e;color:#fff;border-color:transparent}
+.btn-filled:hover{background:#2d2d44}
+.btn-danger{color:#791F1F;border-color:#F7C1C1}
+.btn-danger:hover{background:#FCEBEB}
+.folder-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.folder-card{background:#fff;border:0.5px solid rgba(0,0,0,0.08);border-radius:12px;padding:1rem;cursor:pointer;transition:all 0.15s;min-height:130px}
+.folder-card:hover{background:#fafafa}
+.folder-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.folder-name{font-size:15px;font-weight:500;margin-bottom:4px;color:#1a1a2e}
+.folder-meta{font-size:12px;color:#888}
+.folder-add{border:0.5px dashed rgba(0,0,0,0.2);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:130px}
+.folder-add:hover{background:#fafafa;border-style:solid}
+.folder-add-icon{width:32px;height:32px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:18px;color:#888}
+.folder-add-text{font-size:13px;color:#888}
+.back-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#888;cursor:pointer;margin-bottom:1.5rem;padding:6px 0;-webkit-user-select:none;user-select:none}
+.back-btn:hover{color:#111}
+.folder-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;gap:12px}
+.folder-header-title{font-size:20px;font-weight:500;margin-bottom:4px;color:#1a1a2e}
+.folder-header-meta{font-size:13px;color:#888}
+.folder-header-actions{display:flex;gap:8px;flex-shrink:0}
+.leitner-boxes{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:1.5rem}
+.lbox{border-radius:10px;padding:10px;border:0.5px solid transparent}
+.lbox-num{font-size:10px;font-weight:500;margin-bottom:2px}
+.lbox-count{font-size:22px;font-weight:500}
+.lbox-freq{font-size:9px;margin-top:2px;opacity:0.7}
+.add-form{background:#f7f7fb;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;border:0.5px solid rgba(0,0,0,0.06)}
+.mode-tabs{display:flex;gap:6px;margin-bottom:1rem;background:#fff;padding:3px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.08)}
+.mode-tab{flex:1;height:32px;border:none;background:transparent;border-radius:6px;font-size:12px;color:#888;cursor:pointer;font-family:inherit}
+.mode-tab.active{background:#1a1a2e;color:#fff}
+.form-row{display:flex;gap:10px;margin-bottom:10px;align-items:center}
+.form-row label{font-size:12px;color:#888;min-width:56px}
+.form-row input{flex:1;height:40px;padding:0 12px;font-size:14px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#fff;color:#111;font-family:inherit;outline:none;-webkit-appearance:none}
+.form-row input:focus{border-color:#534AB7}
+.form-actions{display:flex;gap:8px}
+#bulk-ta{width:100%;min-height:110px;padding:10px 12px;font-size:13px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#fff;color:#111;font-family:ui-monospace,Menlo,monospace;resize:vertical;outline:none;margin-bottom:10px;line-height:1.6}
+.section-title{font-size:13px;font-weight:500;color:#888;margin-bottom:10px}
+.cards-list{display:flex;flex-direction:column;gap:6px}
+.card-item{background:#fff;border:0.5px solid rgba(0,0,0,0.08);border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card-item-content{flex:1;min-width:0}
+.card-item-front{font-size:14px;color:#1a1a2e;margin-bottom:2px;word-break:break-word}
+.card-item-back{font-size:12px;color:#888;word-break:break-word}
+.card-item-del{width:28px;height:28px;border-radius:6px;border:0.5px solid rgba(0,0,0,0.1);background:#fff;color:#791F1F;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card-item-del:hover{background:#FCEBEB}
+.study-wrap{background:#fff;border:0.5px solid rgba(0,0,0,0.08);border-radius:20px;padding:1.5rem}
+.study-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;gap:12px}
+.study-counter{font-size:12px;color:#888;white-space:nowrap}
+.progress-bar-bg{flex:1;height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden}
+.progress-bar-fill{height:100%;background:#534AB7;transition:width 0.3s}
+.card-container{margin-bottom:1rem;cursor:pointer;position:relative}
+.card-slide{background:#fff;border:0.5px solid rgba(0,0,0,0.08);border-radius:16px;padding:3.5rem 1.5rem;text-align:center;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.2s,transform 0.2s}
+.card-back-el{display:none}
+.card-container.flipped .card-front-el{display:none}
+.card-container.flipped .card-back-el{display:flex}
+.study-word{font-size:26px;font-weight:500;color:#1a1a2e;margin-bottom:10px;word-break:break-word}
+.study-hint{font-size:11px;color:#888}
+.study-box-badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:500;margin-bottom:12px}
+.toggle-hint{font-size:11px;color:#888;margin-top:12px}
+.study-actions{display:flex;gap:10px;justify-content:center;margin-bottom:1rem}
+.btn-wrong{background:#FCEBEB;color:#791F1F;border-color:#F7C1C1;font-size:14px;height:48px;padding:0 28px;border-radius:10px}
+.btn-wrong:hover{background:#F7C1C1}.btn-wrong:active{transform:scale(0.97)}
+.btn-right{background:#EAF3DE;color:#27500A;border-color:#C0DD97;font-size:14px;height:48px;padding:0 28px;border-radius:10px}
+.btn-right:hover{background:#C0DD97}.btn-right:active{transform:scale(0.97)}
+.btn-show{height:48px;padding:0 36px;font-size:14px;border-radius:10px;background:#534AB7;color:#fff;border-color:transparent}
+.btn-show:hover{background:#3C3489}
+.score-bar{display:flex;gap:8px;justify-content:center;margin-bottom:1rem}
+.score-chip{display:flex;align-items:center;gap:6px;padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500}
+.score-correct{background:#EAF3DE;color:#27500A}
+.score-wrong{background:#FCEBEB;color:#791F1F}
+.score-dot{width:8px;height:8px;border-radius:50%}
+.score-dot-g{background:#3B6D11}
+.score-dot-r{background:#A32D2D}
+.done-card{background:#fff;border:0.5px solid rgba(0,0,0,0.08);border-radius:20px;padding:2.5rem;text-align:center}
+.done-icon{font-size:40px;margin-bottom:12px}
+.done-title{font-size:20px;font-weight:500;margin-bottom:8px;color:#1a1a2e}
+.done-sub{font-size:14px;color:#888;margin-bottom:1.5rem;line-height:1.7}
+.done-actions{display:flex;gap:10px;justify-content:center}
+.modal-bg{min-height:220px;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(26,26,46,0.2);border-radius:16px;margin-bottom:1rem}
+.modal{background:#fff;border-radius:14px;border:0.5px solid rgba(0,0,0,0.1);padding:1.5rem;width:100%;max-width:360px}
+.modal-title{font-size:16px;font-weight:500;margin-bottom:1rem;color:#1a1a2e}
+.modal input{width:100%;height:40px;padding:0 12px;font-size:14px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#f7f7fb;color:#111;font-family:inherit;outline:none;margin-bottom:12px;-webkit-appearance:none}
+.modal input:focus{border-color:#534AB7}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.color-row{display:flex;gap:8px;margin-bottom:14px}
+.color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color 0.1s}
+.color-dot.sel{border-color:#1a1a2e}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div id="page-home" class="page active">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Flashcard <span class="sync-dot" id="sync-dot"></span></div>
+      <div class="topbar-sub" id="sync-status">Yükleniyor...</div>
+    </div>
+    <button class="btn btn-filled" onclick="showNewFolder()">+ Yeni set</button>
+  </div>
+  <div class="folder-grid" id="folder-grid"></div>
+</div>
+
+<div id="page-new-folder" class="page">
+  <div class="modal-bg">
+    <div class="modal">
+      <div class="modal-title">Yeni kelime seti</div>
+      <input type="text" id="nf-name" placeholder="Set adı (örn: Almanca A1)" maxlength="40" />
+      <div style="font-size:12px;color:#888;margin-bottom:8px">Renk seç</div>
+      <div class="color-row" id="color-row"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="goHome()">İptal</button>
+        <button class="btn btn-filled" onclick="createFolder()">Oluştur</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="page-folder" class="page">
+  <div class="back-btn" onclick="goHome()">← Tüm setler</div>
+  <div class="folder-header">
+    <div>
+      <div class="folder-header-title" id="fh-title"></div>
+      <div class="folder-header-meta" id="fh-meta"></div>
+    </div>
+    <div class="folder-header-actions">
+      <button class="btn btn-filled" onclick="startStudy()">Çalış</button>
+      <button class="btn btn-danger" onclick="deleteFolder()">Sil</button>
+    </div>
+  </div>
+  <div class="leitner-boxes" id="leitner-boxes"></div>
+  <div class="add-form">
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tab-single" onclick="setAddMode('single')">Tek ekle</button>
+      <button class="mode-tab" id="tab-bulk" onclick="setAddMode('bulk')">Toplu ekle</button>
+    </div>
+    <div id="add-single">
+      <div class="form-row"><label>Ön yüz</label><input type="text" id="a-front" placeholder="örn: Hund" /></div>
+      <div class="form-row"><label>Arka yüz</label><input type="text" id="a-back" placeholder="örn: köpek" /></div>
+      <div class="form-actions"><button class="btn btn-filled" onclick="addCard()">Ekle</button></div>
+    </div>
+    <div id="add-bulk" style="display:none">
+      <p style="font-size:12px;color:#888;margin-bottom:8px">Her satıra: <code style="font-family:monospace;font-size:11px;background:#fff;padding:1px 5px;border-radius:4px;border:0.5px solid rgba(0,0,0,0.1)">ön yüz = arka yüz</code></p>
+      <textarea id="bulk-ta" placeholder="Hund = köpek&#10;Katze = kedi&#10;Haus = ev&#10;Apfel = elma"></textarea>
+      <div class="form-actions"><button class="btn btn-filled" onclick="addBulk()">Tümünü ekle</button></div>
+    </div>
+  </div>
+  <div class="section-title">Tüm kartlar</div>
+  <div class="cards-list" id="cards-list"></div>
+</div>
+
+<div id="page-study" class="page">
+  <div class="back-btn" onclick="goFolder()">← <span id="study-back-label"></span></div>
+  <div id="study-active">
+    <div class="study-wrap">
+      <div class="study-topbar">
+        <span class="study-counter"><strong id="s-idx">1</strong> / <span id="s-total">10</span></span>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="s-prog" style="width:0%"></div></div>
+        <span class="study-counter" id="s-box-lbl" style="color:#534AB7;font-weight:500"></span>
+      </div>
+      <div class="card-container" id="card-container" onclick="handleCardClick()">
+        <div class="card-slide card-front-el" id="card-front-el">
+          <div class="study-word" id="s-front"></div>
+          <div class="study-hint">dokunarak cevabı gör</div>
+        </div>
+        <div class="card-slide card-back-el" id="card-back-el">
+          <div class="study-box-badge" id="s-badge"></div>
+          <div class="study-word" id="s-back"></div>
+          <div class="toggle-hint">tekrar dokunarak ön yüze dön</div>
+        </div>
+      </div>
+      <div id="s-show-row" style="display:flex;justify-content:center;margin-bottom:1rem">
+        <button class="btn btn-show" onclick="revealCard()">Cevabı gör</button>
+      </div>
+      <div id="s-action-row" class="study-actions" style="display:none">
+        <button class="btn-wrong btn" onclick="markCard(false)">✕ Bilmedim</button>
+        <button class="btn-right btn" onclick="markCard(true)">✓ Bildim</button>
+      </div>
+    </div>
+    <div class="score-bar">
+      <div class="score-chip score-correct"><div class="score-dot score-dot-g"></div><span id="s-correct">0</span> doğru</div>
+      <div class="score-chip score-wrong"><div class="score-dot score-dot-r"></div><span id="s-wrong">0</span> yanlış</div>
+    </div>
+  </div>
+  <div id="study-done" style="display:none">
+    <div class="done-card">
+      <div class="done-icon">🎉</div>
+      <div class="done-title">Oturum tamamlandı!</div>
+      <div class="done-sub" id="done-sub"></div>
+      <div class="done-actions">
+        <button class="btn" onclick="goFolder()">Sete dön</button>
+        <button class="btn btn-filled" onclick="startStudy()">Tekrar çalış</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- .app -->
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ── Firebase setup ── */
+const firebaseConfig = {
+  apiKey: "AIzaSyAJJEYEFyIDiV1zS4-BLyJ0p_wuGJVq1Ws",
+  authDomain: "flashcard-1e281.firebaseapp.com",
+  projectId: "flashcard-1e281",
+  storageBucket: "flashcard-1e281.firebasestorage.app",
+  messagingSenderId: "633351689761",
+  appId: "1:633351689761:web:c5fed61913b87d95a67560"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db    = getFirestore(fbApp);
+const docRef = doc(db, "flashcard", "main");
+
+/* offline persistence (best-effort — silently ignored if already enabled) */
+enableIndexedDbPersistence(db).catch(() => {});
+
+/* ── Constants ── */
+const COLORS=[
+  {bg:'#E6F1FB',border:'#B5D4F4',text:'#0C447C',icon:'#185FA5'},
+  {bg:'#EEEDFE',border:'#CECBF6',text:'#3C3489',icon:'#534AB7'},
+  {bg:'#E1F5EE',border:'#9FE1CB',text:'#085041',icon:'#0F6E56'},
+  {bg:'#FAEEDA',border:'#FAC775',text:'#633806',icon:'#854F0B'},
+  {bg:'#FAECE7',border:'#F5C4B3',text:'#712B13',icon:'#993C1D'},
+  {bg:'#FBEAF0',border:'#F4C0D1',text:'#72243E',icon:'#993556'},
+];
+const LFREQ=['Her gün','2 günde bir','Haftada bir','2 haftada bir','Ayda bir'];
+const LBC=[
+  {bg:'#E6F1FB',num:'#185FA5',cnt:'#0C447C'},
+  {bg:'#EEEDFE',num:'#534AB7',cnt:'#3C3489'},
+  {bg:'#E1F5EE',num:'#0F6E56',cnt:'#085041'},
+  {bg:'#FAEEDA',num:'#854F0B',cnt:'#633806'},
+  {bg:'#EAF3DE',num:'#3B6D11',cnt:'#27500A'},
+];
+const LS_KEY = 'flashcard_data';
+
+/* ── State ── */
+let folders=[], selFolder=null, selColor=0, idSeq=0;
+let queue=[], qIdx=0, sRight=0, sWrong=0, revealed=false;
+let isSyncing=false;
+
+/* ── Helpers ── */
+function uid(){ return (++idSeq)+'_'+Date.now(); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showPage(id){ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); }
+function setSyncUI(state){
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-status');
+  if(state==='online'){  dot.className='sync-dot online'; lbl.textContent='Senkronize'; }
+  else if(state==='syncing'){ dot.className='sync-dot syncing'; lbl.textContent='Kaydediliyor...'; }
+  else{ dot.className='sync-dot'; lbl.textContent='Çevrimdışı (yerel)'; }
+}
+
+/* ── Persistence: localStorage (always) + Firestore (when online) ── */
+function saveLocal(){
+  const data={ folders, idSeq, updatedAt: Date.now() };
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(data)); }catch(e){}
+  return data;
+}
+
+async function saveToCloud(){
+  const data = saveLocal();
+  setSyncUI('syncing');
+  try{
+    await setDoc(docRef, data);
+    setSyncUI('online');
+  }catch(e){
+    setSyncUI('offline');
+  }
+}
+
+function applyCloudData(cloud){
+  folders = cloud.folders || [];
+  idSeq   = cloud.idSeq   || 0;
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(cloud)); }catch(e){}
+}
+
+/* ── Boot: load local first, then start Firestore listener ── */
+function boot(){
+  /* 1. Load from localStorage immediately so UI is usable at once */
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      folders = d.folders || [];
+      idSeq   = d.idSeq   || 0;
+    }
+  }catch(e){}
+  renderFolders();
+  setSyncUI('offline');
+
+  /* 2. Start Firestore real-time listener */
+  onSnapshot(docRef, (snap) => {
+    setSyncUI('online');
+    if(!snap.exists()){
+      /* First time — push local data up */
+      saveToCloud();
+      return;
+    }
+    const cloud = snap.data();
+    const localRaw = localStorage.getItem(LS_KEY);
+    const localTs  = localRaw ? (JSON.parse(localRaw).updatedAt || 0) : 0;
+    const cloudTs  = cloud.updatedAt || 0;
+
+    if(cloudTs > localTs){
+      /* Cloud is newer — apply it */
+      applyCloudData(cloud);
+      /* Re-render whichever page is active */
+      if(document.getElementById('page-home').classList.contains('active')){
+        renderFolders();
+      } else if(document.getElementById('page-folder').classList.contains('active') && selFolder){
+        selFolder = folders.find(f=>f.id===selFolder.id) || null;
+        if(selFolder) renderFolder(); else goHome();
+      }
+    }
+    /* If local is newer (e.g. edited offline), do nothing — next saveToCloud will push it */
+  }, (err) => {
+    setSyncUI('offline');
+    console.warn('Firestore listener error:', err);
+  });
+}
+
+/* ── Navigation ── */
+function goHome(){ showPage('home'); renderFolders(); }
+function goFolder(){ showPage('folder'); renderFolder(); }
+
+function showNewFolder(){
+  selColor=0;
+  document.getElementById('nf-name').value='';
+  renderColorRow();
+  showPage('new-folder');
+  setTimeout(()=>document.getElementById('nf-name').focus(),100);
+}
+
+/* ── Color picker ── */
+function renderColorRow(){
+  document.getElementById('color-row').innerHTML=COLORS.map((c,i)=>
+    `<div class="color-dot${i===selColor?' sel':''}" style="background:${c.bg};border-color:${i===selColor?c.icon:'transparent'}" onclick="window._setColor(${i})"></div>`
+  ).join('');
+}
+window._setColor=function(i){ selColor=i; renderColorRow(); };
+
+/* ── Folder CRUD ── */
+function createFolder(){
+  const name=document.getElementById('nf-name').value.trim();
+  if(!name){ document.getElementById('nf-name').focus(); return; }
+  folders.push({id:uid(),name,color:selColor,cards:[]});
+  saveToCloud();
+  goHome();
+}
+
+function deleteFolder(){
+  if(!confirm('Bu seti silmek istediğinden emin misin?')) return;
+  folders=folders.filter(f=>f.id!==selFolder.id);
+  saveToCloud();
+  selFolder=null; goHome();
+}
+
+function openFolder(id){
+  selFolder=folders.find(f=>f.id===id);
+  showPage('folder'); renderFolder();
+}
+
+/* ── Render: home ── */
+function renderFolders(){
+  const g=document.getElementById('folder-grid');
+  let html=folders.map(f=>{
+    const c=COLORS[f.color]||COLORS[0];
+    const total=f.cards.length, done=f.cards.filter(c=>c.box===4).length;
+    return`<div class="folder-card" onclick="window._openFolder('${f.id}')">
+      <div class="folder-icon" style="background:${c.bg}">${folderSVG(c.icon)}</div>
+      <div class="folder-name">${esc(f.name)}</div>
+      <div class="folder-meta">${total} kart · ${done} öğrenildi</div>
+    </div>`;
+  }).join('');
+  html+=`<div class="folder-card folder-add" onclick="showNewFolder()">
+    <div class="folder-add-icon">+</div>
+    <div class="folder-add-text">Yeni set oluştur</div>
+  </div>`;
+  g.innerHTML=html;
+}
+window._openFolder=function(id){ openFolder(id); };
+
+function folderSVG(color){
+  return`<svg width="22" height="18" viewBox="0 0 22 18" fill="none"><path d="M1 3.5C1 2.4 1.9 1.5 3 1.5H8.5L10.5 3.5H19C20.1 3.5 21 4.4 21 5.5V15C21 16.1 20.1 17 19 17H3C1.9 17 1 16.1 1 15V3.5Z" fill="${color}" opacity="0.25"/><path d="M1 6.5H21V15C21 16.1 20.1 17 19 17H3C1.9 17 1 16.1 1 15V6.5Z" fill="${color}" opacity="0.6"/></svg>`;
+}
+
+/* ── Render: folder ── */
+function renderFolder(){
+  if(!selFolder) return;
+  document.getElementById('fh-title').textContent=selFolder.name;
+  const total=selFolder.cards.length, done=selFolder.cards.filter(c=>c.box===4).length;
+  document.getElementById('fh-meta').textContent=total+' kart · '+done+' kalıcı hafızada';
+  renderBoxes(); renderCardsList();
+}
+
+function renderBoxes(){
+  const boxes=[0,1,2,3,4].map(b=>selFolder.cards.filter(c=>c.box===b).length);
+  document.getElementById('leitner-boxes').innerHTML=boxes.map((count,i)=>{
+    const lc=LBC[i];
+    return`<div class="lbox" style="background:${lc.bg}">
+      <div class="lbox-num" style="color:${lc.num}">Kutu ${i+1}</div>
+      <div class="lbox-count" style="color:${lc.cnt}">${count}</div>
+      <div class="lbox-freq" style="color:${lc.cnt}">${LFREQ[i]}</div>
+    </div>`;
+  }).join('');
+}
+
+function setAddMode(mode){
+  document.getElementById('tab-single').classList.toggle('active',mode==='single');
+  document.getElementById('tab-bulk').classList.toggle('active',mode==='bulk');
+  document.getElementById('add-single').style.display=mode==='single'?'block':'none';
+  document.getElementById('add-bulk').style.display=mode==='bulk'?'block':'none';
+}
+
+function addCard(){
+  const f=document.getElementById('a-front').value.trim();
+  const b=document.getElementById('a-back').value.trim();
+  if(!f||!b){ alert('Her iki alanı da doldur!'); return; }
+  selFolder.cards.push({id:uid(),front:f,back:b,box:0});
+  saveToCloud();
+  document.getElementById('a-front').value=''; document.getElementById('a-back').value='';
+  document.getElementById('a-front').focus(); renderFolder();
+}
+
+function addBulk(){
+  const raw=document.getElementById('bulk-ta').value; let added=0;
+  raw.split('\n').forEach(line=>{
+    const t=line.trim(); if(!t) return;
+    const sep=t.indexOf('='); if(sep===-1) return;
+    const f=t.slice(0,sep).trim(), b=t.slice(sep+1).trim();
+    if(f&&b){ selFolder.cards.push({id:uid(),front:f,back:b,box:0}); added++; }
+  });
+  if(!added){ alert('Hiç geçerli satır bulunamadı.\nFormat: ön yüz = arka yüz'); return; }
+  saveToCloud();
+  document.getElementById('bulk-ta').value=''; renderFolder();
+}
+
+function delCard(id){
+  selFolder.cards=selFolder.cards.filter(c=>c.id!==id);
+  saveToCloud(); renderFolder();
+}
+
+function renderCardsList(){
+  const list=document.getElementById('cards-list');
+  if(!selFolder.cards.length){
+    list.innerHTML='<div style="text-align:center;color:#888;padding:2rem 0;font-size:14px">Henüz kart yok</div>';
+    return;
+  }
+  list.innerHTML=selFolder.cards.map(c=>`
+    <div class="card-item">
+      <div class="card-item-content">
+        <div class="card-item-front">${esc(c.front)}</div>
+        <div class="card-item-back">${esc(c.back)}</div>
+      </div>
+      <button class="card-item-del" onclick="window._delCard('${c.id}')">Sil</button>
+    </div>
+  `).join('');
+}
+window._delCard=function(id){ delCard(id); };
+
+/* ── Study mode ── */
+function startStudy(){
+  if(!selFolder||!selFolder.cards.length){ alert('Bu sette hiç kart yok!'); return; }
+  queue=[...selFolder.cards].sort(()=>Math.random()-0.5);
+  qIdx=0; sRight=0; sWrong=0;
+  document.getElementById('study-back-label').textContent=selFolder.name;
+  document.getElementById('study-active').style.display='block';
+  document.getElementById('study-done').style.display='none';
+  showPage('study'); loadCard();
+}
+
+function loadCard(){
+  if(qIdx>=queue.length){ showDone(); return; }
+  const card=queue[qIdx], total=queue.length;
+  document.getElementById('s-idx').textContent=qIdx+1;
+  document.getElementById('s-total').textContent=total;
+  document.getElementById('s-prog').style.width=Math.round((qIdx/total)*100)+'%';
+  document.getElementById('s-box-lbl').textContent='Kutu '+(card.box+1);
+  document.getElementById('s-front').textContent=card.front;
+  document.getElementById('s-back').textContent=card.back;
+  const lc=LBC[card.box]||LBC[0];
+  const badge=document.getElementById('s-badge');
+  badge.textContent='Kutu '+(card.box+1)+' — '+LFREQ[card.box];
+  badge.style.background=lc.bg; badge.style.color=lc.cnt;
+  document.getElementById('card-container').classList.remove('flipped');
+  document.getElementById('s-show-row').style.display='flex';
+  document.getElementById('s-action-row').style.display='none';
+  document.getElementById('s-correct').textContent=sRight;
+  document.getElementById('s-wrong').textContent=sWrong;
+  revealed=false;
+}
+
+function handleCardClick(){
+  if(!revealed) revealCard();
+  else document.getElementById('card-container').classList.toggle('flipped');
+}
+
+function revealCard(){
+  revealed=true;
+  document.getElementById('card-container').classList.add('flipped');
+  document.getElementById('s-show-row').style.display='none';
+  document.getElementById('s-action-row').style.display='flex';
+}
+
+function markCard(correct){
+  const card=queue[qIdx];
+  const realCard=selFolder.cards.find(c=>c.id===card.id);
+  if(correct){ sRight++; if(realCard.box<4) realCard.box++; }
+  else        { sWrong++; realCard.box=0; }
+  saveToCloud();
+  qIdx++; loadCard();
+}
+
+function showDone(){
+  document.getElementById('study-active').style.display='none';
+  document.getElementById('study-done').style.display='block';
+  document.getElementById('done-sub').innerHTML=`${sRight} doğru · ${sWrong} yanlış<br>Toplam ${queue.length} kart`;
+}
+
+/* ── Expose functions called from inline onclick HTML ── */
+window.showNewFolder = showNewFolder;
+window.goHome        = goHome;
+window.goFolder      = goFolder;
+window.createFolder  = createFolder;
+window.deleteFolder  = deleteFolder;
+window.setAddMode    = setAddMode;
+window.addCard       = addCard;
+window.addBulk       = addBulk;
+window.startStudy    = startStudy;
+window.handleCardClick = handleCardClick;
+window.revealCard    = revealCard;
+window.markCard      = markCard;
+
+/* ── keyboard shortcuts ── */
+document.addEventListener('keydown', e => {
+  if(document.getElementById('page-study').classList.contains('active')){
+    if(e.key==='ArrowRight'||e.key===' '){ e.preventDefault(); if(!revealed) revealCard(); else markCard(true); }
+    if(e.key==='ArrowLeft'){ e.preventDefault(); if(revealed) markCard(false); }
+  }
+});
+
+/* ── Enter keys on inputs ── */
+document.getElementById('a-back').addEventListener('keydown', e=>{ if(e.key==='Enter') addCard(); });
+document.getElementById('nf-name').addEventListener('keydown', e=>{ if(e.key==='Enter') createFolder(); });
+
+/* ── Start ── */
+boot();
+</script>
+</body>
+</html>
