@@ -2,252 +2,205 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Flashcard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Flashcard Pro | Erencan</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#fafafa;color:#1a1a2e;font-size:14px;line-height:1.5}
-.app{max-width:520px;margin:0 auto;min-height:100vh;padding:1.25rem}
-.page{display:none}.page.active{display:block}
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.75rem}
-.topbar-title{font-size:20px;font-weight:500;color:#1a1a2e}
-.topbar-sub{font-size:13px;color:#888;margin-top:2px}
-.sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ccc;margin-left:8px;vertical-align:middle;transition:background 0.3s}
-.sync-dot.online{background:#3B6D11}.sync-dot.syncing{background:#854F0B}
-.btn{height:36px;padding:0 16px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.12);background:#fff;color:#111;font-size:13px;font-weight:400;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all 0.15s;font-family:inherit;-webkit-user-select:none;user-select:none}
-.btn:hover{background:#f5f5f5}.btn:active{transform:scale(0.98)}
-.btn-filled{background:#1a1a2e;color:#fff;border-color:transparent}
-.btn-filled:hover{background:#2d2d44}
-.btn-filled:disabled{background:#888;cursor:not-allowed}
-.btn-danger{color:#791F1F;border-color:#F7C1C1}
-.btn-danger:hover{background:#FCEBEB}
-.folder-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-.folder-card{background:#fff;border:0.5px solid rgba(0,0,0,0.08);border-radius:12px;padding:1rem;cursor:pointer;transition:all 0.15s;min-height:130px}
-.folder-card:hover{background:#fafafa}
-.folder-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
-.folder-name{font-size:15px;font-weight:500;margin-bottom:4px;color:#1a1a2e}
-.folder-meta{font-size:12px;color:#888}
-.folder-add{border:0.5px dashed rgba(0,0,0,0.2);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:130px}
-.folder-add:hover{background:#fafafa;border-style:solid}
-.folder-add-icon{width:32px;height:32px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:18px;color:#888}
-.folder-add-text{font-size:13px;color:#888}
-.back-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#888;cursor:pointer;margin-bottom:1.5rem;padding:6px 0;-webkit-user-select:none;user-select:none}
-.back-btn:hover{color:#111}
-.folder-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;gap:12px}
-.folder-header-title{font-size:20px;font-weight:500;margin-bottom:4px;color:#1a1a2e}
-.folder-header-meta{font-size:13px;color:#888}
-.folder-header-actions{display:flex;gap:8px;flex-shrink:0}
-.leitner-boxes{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:1.5rem}
-.lbox{border-radius:10px;padding:10px;border:0.5px solid transparent}
-.lbox-num{font-size:10px;font-weight:500;margin-bottom:2px}
-.lbox-count{font-size:22px;font-weight:500}
-.lbox-freq{font-size:9px;margin-top:2px;opacity:0.7}
-.add-form{background:#f7f7fb;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;border:0.5px solid rgba(0,0,0,0.06)}
-.mode-tabs{display:flex;gap:6px;margin-bottom:1rem;background:#fff;padding:3px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.08)}
-.mode-tab{flex:1;height:32px;border:none;background:transparent;border-radius:6px;font-size:12px;color:#888;cursor:pointer;font-family:inherit}
-.mode-tab.active{background:#1a1a2e;color:#fff}
-.form-row{display:flex;gap:10px;margin-bottom:10px;align-items:center}
-.form-row label{font-size:12px;color:#888;min-width:56px}
-.form-row input[type="text"], .form-row input[type="file"]{flex:1;height:40px;padding:0 12px;font-size:14px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#fff;color:#111;font-family:inherit;outline:none;-webkit-appearance:none}
-.form-row input[type="text"]:focus{border-color:#534AB7}
-.form-row input[type="file"]{padding:8px 12px; font-size:12px; cursor:pointer}
-.form-actions{display:flex;gap:8px; margin-top:14px}
-#bulk-ta{width:100%;min-height:110px;padding:10px 12px;font-size:13px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#fff;color:#111;font-family:ui-monospace,Menlo,monospace;resize:vertical;outline:none;margin-bottom:10px;line-height:1.6}
-.section-title{font-size:13px;font-weight:500;color:#888;margin-bottom:10px}
-.cards-list{display:flex;flex-direction:column;gap:6px}
-.card-item{background:#fff;border:0.5px solid rgba(0,0,0,0.08);border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.card-item-content{flex:1;min-width:0; display:flex; align-items:center; gap:12px}
-.card-item-img{width:40px;height:40px;border-radius:6px;object-fit:cover;border:1px solid #eee;flex-shrink:0}
-.card-item-texts{flex:1;min-width:0}
-.card-item-front{font-size:14px;color:#1a1a2e;margin-bottom:2px;word-break:break-word;font-weight:500}
-.card-item-back{font-size:12px;color:#888;word-break:break-word}
-.card-item-del{width:28px;height:28px;border-radius:6px;border:0.5px solid rgba(0,0,0,0.1);background:#fff;color:#791F1F;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.card-item-del:hover{background:#FCEBEB}
-.study-wrap{background:#fff;border:0.5px solid rgba(0,0,0,0.08);border-radius:20px;padding:1.5rem}
-.study-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;gap:12px}
-.study-counter{font-size:12px;color:#888;white-space:nowrap}
-.progress-bar-bg{flex:1;height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden}
-.progress-bar-fill{height:100%;background:#534AB7;transition:width 0.3s}
-.card-container{margin-bottom:1rem;cursor:pointer;position:relative;perspective:1000px}
-.card-slide{background:#fff;border:0.5px solid rgba(0,0,0,0.08);border-radius:16px;padding:2rem 1.5rem;text-align:center;min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:transform 0.4s; backface-visibility:hidden; width:100%}
-.card-back-el{position:absolute;top:0;left:0;transform:rotateY(180deg)}
-.card-container.flipped .card-front-el{transform:rotateY(180deg)}
-.card-container.flipped .card-back-el{transform:rotateY(0deg)}
-.study-word{font-size:26px;font-weight:500;color:#1a1a2e;margin-bottom:10px;word-break:break-word}
-.study-img{max-width:100%; max-height:160px; border-radius:10px; margin-bottom:16px; object-fit:contain; display:none}
-.study-hint{font-size:11px;color:#888; margin-top:8px}
-.study-box-badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:500;margin-bottom:12px}
-.study-actions{display:flex;gap:10px;justify-content:center;margin-bottom:1rem}
-.btn-wrong{background:#FCEBEB;color:#791F1F;border-color:#F7C1C1;font-size:14px;height:48px;padding:0 28px;border-radius:10px}
-.btn-wrong:hover{background:#F7C1C1}.btn-wrong:active{transform:scale(0.97)}
-.btn-right{background:#EAF3DE;color:#27500A;border-color:#C0DD97;font-size:14px;height:48px;padding:0 28px;border-radius:10px}
-.btn-right:hover{background:#C0DD97}.btn-right:active{transform:scale(0.97)}
-.btn-show{height:48px;padding:0 36px;font-size:14px;border-radius:10px;background:#534AB7;color:#fff;border-color:transparent}
-.btn-show:hover{background:#3C3489}
-.score-bar{display:flex;gap:8px;justify-content:center;margin-bottom:1rem}
-.score-chip{display:flex;align-items:center;gap:6px;padding:7px 18px;border-radius:20px;font-size:13px;font-weight:500}
-.score-correct{background:#EAF3DE;color:#27500A}
-.score-wrong{background:#FCEBEB;color:#791F1F}
-.score-dot{width:8px;height:8px;border-radius:50%}
-.score-dot-g{background:#3B6D11}
-.score-dot-r{background:#A32D2D}
-.done-card{background:#fff;border:0.5px solid rgba(0,0,0,0.08);border-radius:20px;padding:2.5rem;text-align:center}
-.done-icon{font-size:40px;margin-bottom:12px}
-.done-title{font-size:20px;font-weight:500;margin-bottom:8px;color:#1a1a2e}
-.done-sub{font-size:14px;color:#888;margin-bottom:1.5rem;line-height:1.7}
-.done-actions{display:flex;gap:10px;justify-content:center}
-.modal-bg{min-height:220px;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(26,26,46,0.2);border-radius:16px;margin-bottom:1rem}
-.modal{background:#fff;border-radius:14px;border:0.5px solid rgba(0,0,0,0.1);padding:1.5rem;width:100%;max-width:360px}
-.modal-title{font-size:16px;font-weight:500;margin-bottom:1rem;color:#1a1a2e}
-.modal input{width:100%;height:40px;padding:0 12px;font-size:14px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#f7f7fb;color:#111;font-family:inherit;outline:none;margin-bottom:12px;-webkit-appearance:none}
-.modal input:focus{border-color:#534AB7}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end}
-.color-row{display:flex;gap:8px;margin-bottom:14px}
-.color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color 0.1s}
-.color-dot.sel{border-color:#1a1a2e}
+:root {
+  --bg: #fafafa; --text: #1a1a2e; --card-bg: #ffffff; --border: rgba(0,0,0,0.08);
+  --btn-bg: #1a1a2e; --btn-text: #ffffff; --sub-text: #888; --input-bg: #ffffff;
+  --accent: #534AB7; --danger: #ff4d4d; --success: #3B6D11;
+}
+body.dark {
+  --bg: #121212; --text: #e0e0e0; --card-bg: #1e1e1e; --border: rgba(255,255,255,0.1);
+  --btn-bg: #534AB7; --btn-text: #ffffff; --sub-text: #aaa; --input-bg: #2d2d2d;
+}
 
-/* Auth Page overrides */
-/* Sadece 'active' class'ına sahipken görünür olmasını sağlıyoruz */ #page-auth.active { display:flex; align-items:center; justify-content:center; min-height:80vh; }
-#page-auth .modal-bg { background:transparent; padding:0; }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--text); font-size:14px; line-height:1.5;
+  transition: background 0.3s, color 0.3s;
+  -webkit-font-smoothing: antialiased;
+}
+.app{max-width:650px;margin:0 auto;min-height:100vh;padding:1.5rem}
+.page{display:none; animation: fadeIn 0.2s ease-out;}
+.page.active{display:block}
+@keyframes fadeIn { from {opacity: 0; transform: translateY(5px);} to {opacity: 1; transform: translateY(0);} }
+
+/* Header & Navigation */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem}
+.topbar-title{font-size:22px;font-weight:700; letter-spacing:-0.5px}
+.topbar-actions { display: flex; gap: 10px; align-items: center; }
+.dark-toggle { background: none; border: none; cursor: pointer; font-size: 22px; padding: 8px; border-radius: 50%; transition: background 0.2s; }
+.dark-toggle:hover { background: var(--border); }
+
+/* Status Indicators */
+.sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-left:8px;vertical-align:middle}
+.sync-dot.online{background:var(--success); box-shadow: 0 0 8px var(--success)}
+
+/* Buttons & Inputs */
+.btn{
+  height:46px;padding:0 20px;border-radius:12px;border:1px solid var(--border);
+  background:var(--card-bg);color:var(--text);font-size:14px;font-weight:600;
+  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+  gap:8px;transition:all 0.2s;font-family:inherit;
+}
+.btn-filled{background:var(--btn-bg);color:var(--btn-text);border-color:transparent}
+.btn-filled:active{transform:scale(0.96)}
+.btn-danger{color:var(--danger);border-color:rgba(255,77,77,0.2)}
+
+input[type="text"], input[type="email"], input[type="password"], textarea {
+  width:100%;height:48px;padding:0 16px;border-radius:12px;
+  border:1px solid var(--border);background:var(--input-bg);color:var(--text);
+  outline:none;font-size:15px;margin-bottom:12px; transition: border-color 0.2s;
+}
+input:focus, textarea:focus { border-color: var(--accent); }
+textarea { min-height: 120px; padding: 12px; line-height: 1.6; font-family: ui-monospace, monospace; }
+
+/* Grid Systems */
+.folder-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.folder-card{
+  background:var(--card-bg);border:1px solid var(--border);border-radius:18px;
+  padding:1.5rem;cursor:pointer;transition:all 0.2s;min-height:130px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+.folder-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
+.folder-name{font-size:17px;font-weight:700}
+.folder-meta{font-size:13px;color:var(--sub-text)}
+
+/* Study Mode & Image Logic */
+.card-slide{
+  background:var(--card-bg);border:1px solid var(--border);border-radius:24px;
+  padding:2.5rem 1.5rem;text-align:center;min-height:420px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  backface-visibility:hidden;width:100%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+.study-img{
+  max-width:100%; max-height:260px; border-radius:16px;
+  margin-bottom:24px; object-fit:contain;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  display:none;
+}
+.study-word{font-size:32px;font-weight:700;margin-bottom:12px; word-break: break-word;}
+
+/* Tabs */
+.mode-tabs{display:flex;gap:8px;margin-bottom:1.5rem;background:var(--border);padding:4px;border-radius:12px}
+.mode-tab{flex:1;height:36px;border:none;background:transparent;border-radius:8px;font-size:13px;color:var(--sub-text);cursor:pointer;font-weight:600}
+.mode-tab.active{background:var(--card-bg);color:var(--text);box-shadow: 0 2px 6px rgba(0,0,0,0.05)}
+
+/* iOS Safari Specifics */
+@media (max-width: 480px) {
+  .folder-grid { grid-template-columns: 1fr; }
+  .app { padding: 1rem; }
+  .study-word { font-size: 26px; }
+}
 </style>
 </head>
-<body>
+<body class="light">
 <div class="app">
 
 <div id="page-auth" class="page">
-  <div class="modal-bg">
-    <div class="modal" style="box-shadow: 0 4px 24px rgba(0,0,0,0.05)">
-      <div class="modal-title" id="auth-title">Giriş Yap</div>
-      <p style="font-size:12px; color:#888; margin-bottom:16px">Verilerinin cihazlar arası eşitlenmesi için hesap oluştur.</p>
-      <input type="email" id="auth-email" placeholder="E-posta adresin" />
-      <input type="password" id="auth-pass" placeholder="Şifren" />
-      <div id="auth-error" style="color:#791F1F;font-size:12px;margin-bottom:10px;display:none"></div>
-      <div class="modal-actions" style="justify-content:space-between; align-items:center; margin-top:10px">
-        <a href="javascript:void(0)" style="font-size:13px;color:#534AB7;text-decoration:none;font-weight:500" id="auth-toggle" onclick="toggleAuthMode()">Kayıt Ol</a>
-        <button class="btn btn-filled" id="auth-btn" onclick="handleAuth()">Giriş Yap</button>
+    <div class="modal" style="margin: 0 auto; box-shadow: 0 20px 40px rgba(0,0,0,0.1); padding: 2.5rem; border-radius: 24px; background: var(--card-bg); width: 100%; max-width: 400px;">
+      <div class="topbar-title" id="auth-title" style="margin-bottom:10px; font-size: 24px">Hoş Geldin</div>
+      <p style="font-size: 13px; color: var(--sub-text); margin-bottom: 20px;">Öğrenme yolculuğuna devam etmek için giriş yap.</p>
+      <input type="email" id="auth-email" placeholder="E-posta" />
+      <input type="password" id="auth-pass" placeholder="Şifre" />
+      <div id="auth-error" style="color:var(--danger);font-size:12px;margin-bottom:10px;display:none"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 10px">
+        <a href="javascript:void(0)" style="font-size:14px;color:var(--accent);text-decoration:none;font-weight:600" onclick="toggleAuthMode()">Hesap Oluştur</a>
+        <button class="btn btn-filled" id="auth-btn" onclick="handleAuth()">Devam Et</button>
       </div>
     </div>
-  </div>
 </div>
 
 <div id="page-home" class="page">
   <div class="topbar">
     <div>
-      <div class="topbar-title">Flashcard <span class="sync-dot" id="sync-dot"></span></div>
-      <div class="topbar-sub" id="sync-status">Bağlanıyor...</div>
+      <div class="topbar-title">Koleksiyon <span class="sync-dot" id="sync-dot"></span></div>
+      <div class="folder-meta" id="sync-status">Bağlanıyor...</div>
     </div>
-    <div style="display:flex; gap:8px;">
+    <div class="topbar-actions">
+      <button class="dark-toggle" onclick="toggleDarkMode()">🌓</button>
       <button class="btn" onclick="handleLogout()">Çıkış</button>
-      <button class="btn btn-filled" onclick="showNewFolder()">+ Yeni set</button>
+      <button class="btn btn-filled" onclick="showPage('new-folder')">+ Yeni Set</button>
     </div>
   </div>
   <div class="folder-grid" id="folder-grid"></div>
 </div>
 
-<div id="page-new-folder" class="page">
-  <div class="modal-bg">
-    <div class="modal">
-      <div class="modal-title">Yeni kelime seti</div>
-      <input type="text" id="nf-name" placeholder="Set adı (örn: Almanca A1)" maxlength="40" />
-      <div style="font-size:12px;color:#888;margin-bottom:8px">Renk seç</div>
-      <div class="color-row" id="color-row"></div>
-      <div class="modal-actions">
-        <button class="btn" onclick="goHome()">İptal</button>
-        <button class="btn btn-filled" onclick="createFolder()">Oluştur</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <div id="page-folder" class="page">
-  <div class="back-btn" onclick="goHome()">← Tüm setler</div>
-  <div class="folder-header">
-    <div>
-      <div class="folder-header-title" id="fh-title"></div>
-      <div class="folder-header-meta" id="fh-meta"></div>
-    </div>
-    <div class="folder-header-actions">
-      <button class="btn btn-filled" onclick="startStudy()">Çalış</button>
+  <div style="cursor:pointer; color:var(--sub-text); margin-bottom:15px; font-weight: 500" onclick="goHome()">← Kütüphaneye Dön</div>
+  <div class="topbar">
+    <div id="fh-title" class="topbar-title"></div>
+    <div class="topbar-actions">
+      <button class="btn btn-filled" onclick="startStudy()" style="padding: 0 30px">Çalışmaya Başla</button>
       <button class="btn btn-danger" onclick="deleteFolder()">Sil</button>
     </div>
   </div>
-  <div class="leitner-boxes" id="leitner-boxes"></div>
-  <div class="add-form">
+  
+  <div style="background:var(--card-bg); border-radius: 20px; padding: 1.5rem; border: 1px solid var(--border); margin-bottom: 2rem">
     <div class="mode-tabs">
-      <button class="mode-tab active" id="tab-single" onclick="setAddMode('single')">Tek ekle</button>
-      <button class="mode-tab" id="tab-bulk" onclick="setAddMode('bulk')">Toplu ekle</button>
+      <button class="mode-tab active" id="tab-single" onclick="setAddMode('single')">Tekli Ekle</button>
+      <button class="mode-tab" id="tab-bulk" onclick="setAddMode('bulk')">Toplu Ekle</button>
     </div>
+
     <div id="add-single">
-      <div class="form-row"><label>Ön yüz</label><input type="text" id="a-front" placeholder="örn: Hund" /></div>
-      <div class="form-row"><label>Arka yüz</label><input type="text" id="a-back" placeholder="örn: köpek" /></div>
-      <div class="form-row"><label>Görsel</label><input type="file" id="a-image" accept="image/*" /></div>
-      <div class="form-actions"><button class="btn btn-filled" id="btn-add-card" onclick="addCard()">Kartı Ekle</button></div>
+      <input type="text" id="a-front" placeholder="Ön yüz (örn: Das Haus)" />
+      <input type="text" id="a-back" placeholder="Arka yüz (örn: Ev)" />
+      <div style="margin-bottom: 15px">
+        <label style="font-size: 12px; color: var(--sub-text); display: block; margin-bottom: 5px">Görsel Ekle (Opsiyonel)</label>
+        <input type="file" id="a-image" accept="image/*" style="font-size: 12px" />
+      </div>
+      <button class="btn btn-filled" style="width:100%" id="btn-add-card" onclick="addCard()">Kartı Kaydet</button>
     </div>
+
     <div id="add-bulk" style="display:none">
-      <p style="font-size:12px;color:#888;margin-bottom:8px">Her satıra: <code style="font-family:monospace;font-size:11px;background:#fff;padding:1px 5px;border-radius:4px;border:0.5px solid rgba(0,0,0,0.1)">ön yüz = arka yüz</code></p>
-      <textarea id="bulk-ta" placeholder="Hund = köpek&#10;Katze = kedi&#10;Haus = ev&#10;Apfel = elma"></textarea>
-      <div class="form-actions"><button class="btn btn-filled" onclick="addBulk()">Tümünü ekle</button></div>
+      <p style="font-size:12px;color:var(--sub-text);margin-bottom:10px">Her satıra: <code>kelime = anlamı</code> şeklinde yaz.</p>
+      <textarea id="bulk-ta" placeholder="Hund = Köpek&#10;Katze = Kedi"></textarea>
+      <button class="btn btn-filled" style="width:100%" onclick="addBulk()">Tümünü İçe Aktar</button>
     </div>
   </div>
-  <div class="section-title">Tüm kartlar</div>
-  <div class="cards-list" id="cards-list"></div>
+
+  <div class="folder-grid" id="cards-list"></div>
 </div>
 
 <div id="page-study" class="page">
-  <div class="back-btn" onclick="goFolder()">← <span id="study-back-label"></span></div>
+  <div style="cursor:pointer; color:var(--sub-text); margin-bottom:20px" onclick="goFolder()">← Çalışmayı Durdur</div>
   <div id="study-active">
-    <div class="study-wrap">
-      <div class="study-topbar">
-        <span class="study-counter"><strong id="s-idx">1</strong> / <span id="s-total">10</span></span>
-        <div class="progress-bar-bg"><div class="progress-bar-fill" id="s-prog" style="width:0%"></div></div>
-        <span class="study-counter" id="s-box-lbl" style="color:#534AB7;font-weight:500"></span>
+      <div class="card-slide" id="card-container" onclick="handleCardClick()">
+          <img class="study-img" id="s-img" />
+          <div class="study-word" id="s-text"></div>
+          <div style="font-size:13px; color:var(--sub-text); margin-top: 20px" id="s-hint">Cevabı gör</div>
       </div>
-      <div class="card-container" id="card-container" onclick="handleCardClick()">
-        <div class="card-slide card-front-el" id="card-front-el">
-          <img class="study-img" id="s-front-img" />
-          <div class="study-word" id="s-front"></div>
-          <div class="study-hint">dokunarak cevabı gör</div>
-        </div>
-        <div class="card-slide card-back-el" id="card-back-el">
-          <div class="study-box-badge" id="s-badge"></div>
-          <img class="study-img" id="s-back-img" />
-          <div class="study-word" id="s-back"></div>
-          <div class="study-hint">tekrar dokunarak ön yüze dön</div>
-        </div>
+      <div id="s-action-row" style="display:none; gap:12px; margin-top:24px">
+        <button class="btn" style="flex:1; height:54px; color:var(--danger); border-color: var(--danger)" onclick="markCard(false)">✕ Bilmedim</button>
+        <button class="btn btn-filled" style="flex:1; height:54px; background:var(--success)" onclick="markCard(true)">✓ Bildim</button>
       </div>
-      <div id="s-show-row" style="display:flex;justify-content:center;margin-bottom:1rem">
-        <button class="btn btn-show" onclick="revealCard()">Cevabı gör</button>
-      </div>
-      <div id="s-action-row" class="study-actions" style="display:none">
-        <button class="btn-wrong btn" onclick="markCard(false)">✕ Bilmedim</button>
-        <button class="btn-right btn" onclick="markCard(true)">✓ Bildim</button>
-      </div>
-    </div>
-    <div class="score-bar">
-      <div class="score-chip score-correct"><div class="score-dot score-dot-g"></div><span id="s-correct">0</span> doğru</div>
-      <div class="score-chip score-wrong"><div class="score-dot score-dot-r"></div><span id="s-wrong">0</span> yanlış</div>
-    </div>
-  </div>
-  <div id="study-done" style="display:none">
-    <div class="done-card">
-      <div class="done-icon">🎉</div>
-      <div class="done-title">Oturum tamamlandı!</div>
-      <div class="done-sub" id="done-sub"></div>
-      <div class="done-actions">
-        <button class="btn" onclick="goFolder()">Sete dön</button>
-        <button class="btn btn-filled" onclick="startStudy()">Tekrar çalış</button>
-      </div>
-    </div>
   </div>
 </div>
 
-</div><script type="module">
+<div id="page-new-folder" class="page">
+    <div class="modal" style="margin: 40px auto; background: var(--card-bg); padding: 2rem; border-radius: 20px; border: 1px solid var(--border)">
+        <div class="topbar-title" style="margin-bottom: 20px">Yeni Kelime Seti</div>
+        <input type="text" id="nf-name" placeholder="Set adı (örn: Almanca A2)" />
+        <div style="display: flex; gap: 10px; margin-top: 10px">
+            <button class="btn" style="flex:1" onclick="goHome()">İptal</button>
+            <button class="btn btn-filled" style="flex:1" onclick="createFolder()">Oluştur</button>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-/* ── Firebase setup ── */
 const firebaseConfig = {
   apiKey: "AIzaSyAJJEYEFyIDiV1zS4-BLyJ0p_wuGJVq1Ws",
   authDomain: "flashcard-1e281.firebaseapp.com",
@@ -256,441 +209,178 @@ const firebaseConfig = {
   messagingSenderId: "633351689761",
   appId: "1:633351689761:web:c5fed61913b87d95a67560"
 };
-const fbApp = initializeApp(firebaseConfig);
-const db    = getFirestore(fbApp);
-const auth  = getAuth(fbApp);
-const storage = getStorage(fbApp);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const storage = getStorage(app);
 
-let docRef = null;
-let currentUser = null;
-let unsubscribeDb = null;
+let currentUser, docRef, folders = [], selFolder = null, queue = [], qIdx = 0, revealed = false;
 
-/* offline persistence */
-enableIndexedDbPersistence(db).catch(() => {});
+// UI Helpers
+window.showPage = id => {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+};
+window.toggleDarkMode = () => {
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('dark-mode', isDark);
+};
+if(localStorage.getItem('dark-mode') === 'true') document.body.classList.add('dark');
 
-/* ── Constants ── */
-const COLORS=[
-  {bg:'#E6F1FB',border:'#B5D4F4',text:'#0C447C',icon:'#185FA5'},
-  {bg:'#EEEDFE',border:'#CECBF6',text:'#3C3489',icon:'#534AB7'},
-  {bg:'#E1F5EE',border:'#9FE1CB',text:'#085041',icon:'#0F6E56'},
-  {bg:'#FAEEDA',border:'#FAC775',text:'#633806',icon:'#854F0B'},
-  {bg:'#FAECE7',border:'#F5C4B3',text:'#712B13',icon:'#993C1D'},
-  {bg:'#FBEAF0',border:'#F4C0D1',text:'#72243E',icon:'#993556'},
-];
-const LFREQ=['Her gün','2 günde bir','Haftada bir','2 haftada bir','Ayda bir'];
-const LBC=[
-  {bg:'#E6F1FB',num:'#185FA5',cnt:'#0C447C'},
-  {bg:'#EEEDFE',num:'#534AB7',cnt:'#3C3489'},
-  {bg:'#E1F5EE',num:'#0F6E56',cnt:'#085041'},
-  {bg:'#FAEEDA',num:'#854F0B',cnt:'#633806'},
-  {bg:'#EAF3DE',num:'#3B6D11',cnt:'#27500A'},
-];
-let LS_KEY = 'flashcard_data';
-
-/* ── State ── */
-let folders=[], selFolder=null, selColor=0, idSeq=0;
-let queue=[], qIdx=0, sRight=0, sWrong=0, revealed=false;
-let isAuthModeLogin = true;
-
-/* ── Helpers ── */
-function uid(){ return (++idSeq)+'_'+Date.now(); }
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function showPage(id){ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); }
-function setSyncUI(state){
-  const dot=document.getElementById('sync-dot');
-  const lbl=document.getElementById('sync-status');
-  if(!dot || !lbl) return;
-  if(state==='online'){  dot.className='sync-dot online'; lbl.textContent='Senkronize'; }
-  else if(state==='syncing'){ dot.className='sync-dot syncing'; lbl.textContent='Kaydediliyor...'; }
-  else{ dot.className='sync-dot'; lbl.textContent='Çevrimdışı (yerel)'; }
-}
-
-/* ── Auth Logic ── */
-onAuthStateChanged(auth, (user) => {
+// Auth
+onAuthStateChanged(auth, user => {
   if (user) {
     currentUser = user;
-    LS_KEY = 'flashcard_data_' + user.uid; // User specific local storage
     docRef = doc(db, "users", user.uid);
-    bootAppForUser();
-  } else {
-    currentUser = null;
-    if(unsubscribeDb) { unsubscribeDb(); unsubscribeDb = null; }
-    showPage('auth');
-  }
+    onSnapshot(docRef, snap => {
+      if(snap.exists()) { 
+        folders = snap.data().folders || []; 
+        renderFolders(); 
+        document.getElementById('sync-status').textContent = "Senkronize";
+        document.getElementById('sync-dot').classList.add('online');
+      } else { setDoc(docRef, {folders: []}); }
+    });
+    showPage('home');
+  } else { showPage('auth'); }
 });
 
 async function handleAuth() {
-  const email = document.getElementById('auth-email').value.trim();
-  const pass = document.getElementById('auth-pass').value.trim();
-  const errEl = document.getElementById('auth-error');
-  const btn = document.getElementById('auth-btn');
-  
-  if(!email || !pass) { errEl.textContent="Bilgileri eksiksiz girin."; errEl.style.display="block"; return; }
-  
-  errEl.style.display="none";
-  btn.textContent = "Bekleyin...";
-  btn.disabled = true;
-
+  const email = document.getElementById('auth-email').value;
+  const pass = document.getElementById('auth-pass').value;
+  if(!email || !pass) return;
   try {
-    if(isAuthModeLogin) {
-      await signInWithEmailAndPassword(auth, email, pass);
-    } else {
-      await createUserWithEmailAndPassword(auth, email, pass);
-    }
-  } catch(error) {
-    errEl.textContent = error.message;
-    errEl.style.display = "block";
-    btn.textContent = isAuthModeLogin ? "Giriş Yap" : "Kayıt Ol";
-    btn.disabled = false;
-  }
+    if(window.isReg) await createUserWithEmailAndPassword(auth, email, pass);
+    else await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) { alert("Hata: " + e.message); }
 }
 
-function toggleAuthMode() {
-  isAuthModeLogin = !isAuthModeLogin;
-  document.getElementById('auth-title').textContent = isAuthModeLogin ? "Giriş Yap" : "Kayıt Ol";
-  document.getElementById('auth-toggle').textContent = isAuthModeLogin ? "Kayıt Ol" : "Zaten hesabım var";
-  document.getElementById('auth-btn').textContent = isAuthModeLogin ? "Giriş Yap" : "Kayıt Ol";
-  document.getElementById('auth-error').style.display = "none";
-}
+// Folder Logic
+window.createFolder = async () => {
+    const name = document.getElementById('nf-name').value;
+    if(!name) return;
+    folders.push({id: Date.now().toString(), name, cards: []});
+    await setDoc(docRef, {folders});
+    document.getElementById('nf-name').value = '';
+    goHome();
+};
 
-function handleLogout() {
-  if(confirm("Çıkış yapmak istediğine emin misin?")) {
-    signOut(auth);
-  }
-}
-
-/* ── Persistence ── */
-function saveLocal(){
-  const data={ folders, idSeq, updatedAt: Date.now() };
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(data)); }catch(e){}
-  return data;
-}
-
-async function saveToCloud(){
-  if(!currentUser || !docRef) return;
-  const data = saveLocal();
-  setSyncUI('syncing');
-  try{
-    await setDoc(docRef, data);
-    setSyncUI('online');
-  }catch(e){
-    setSyncUI('offline');
-  }
-}
-
-function applyCloudData(cloud){
-  folders = cloud.folders || [];
-  idSeq   = cloud.idSeq   || 0;
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(cloud)); }catch(e){}
-}
-
-/* ── Boot Data ── */
-function bootAppForUser(){
-  try{
-    const raw = localStorage.getItem(LS_KEY);
-    if(raw){
-      const d = JSON.parse(raw);
-      folders = d.folders || [];
-      idSeq   = d.idSeq   || 0;
-    } else {
-      folders = []; idSeq = 0;
-    }
-  }catch(e){}
-  
-  goHome();
-  setSyncUI('offline');
-
-  unsubscribeDb = onSnapshot(docRef, (snap) => {
-    setSyncUI('online');
-    if(!snap.exists()){ saveToCloud(); return; }
-    
-    const cloud = snap.data();
-    const localRaw = localStorage.getItem(LS_KEY);
-    const localTs  = localRaw ? (JSON.parse(localRaw).updatedAt || 0) : 0;
-    const cloudTs  = cloud.updatedAt || 0;
-
-    if(cloudTs > localTs){
-      applyCloudData(cloud);
-      if(document.getElementById('page-home').classList.contains('active')) renderFolders();
-      else if(document.getElementById('page-folder').classList.contains('active') && selFolder){
-        selFolder = folders.find(f=>f.id===selFolder.id) || null;
-        if(selFolder) renderFolder(); else goHome();
-      }
-    }
-  }, (err) => {
-    setSyncUI('offline');
-    console.warn('Firestore listener error:', err);
-  });
-}
-
-/* ── Navigation ── */
-function goHome(){ showPage('home'); renderFolders(); }
-function goFolder(){ showPage('folder'); renderFolder(); }
-
-function showNewFolder(){
-  selColor=0;
-  document.getElementById('nf-name').value='';
-  renderColorRow();
-  showPage('new-folder');
-  setTimeout(()=>document.getElementById('nf-name').focus(),100);
-}
-
-/* ── Color picker ── */
-function renderColorRow(){
-  document.getElementById('color-row').innerHTML=COLORS.map((c,i)=>
-    `<div class="color-dot${i===selColor?' sel':''}" style="background:${c.bg};border-color:${i===selColor?c.icon:'transparent'}" onclick="window._setColor(${i})"></div>`
-  ).join('');
-}
-window._setColor=function(i){ selColor=i; renderColorRow(); };
-
-/* ── Folder CRUD ── */
-function createFolder(){
-  const name=document.getElementById('nf-name').value.trim();
-  if(!name){ document.getElementById('nf-name').focus(); return; }
-  folders.push({id:uid(),name,color:selColor,cards:[]});
-  saveToCloud();
-  goHome();
-}
-
-function deleteFolder(){
-  if(!confirm('Bu seti silmek istediğinden emin misin?')) return;
-  folders=folders.filter(f=>f.id!==selFolder.id);
-  saveToCloud();
-  selFolder=null; goHome();
-}
-
-function openFolder(id){
-  selFolder=folders.find(f=>f.id===id);
-  showPage('folder'); renderFolder();
-}
-
-/* ── Render: home ── */
-function renderFolders(){
-  const g=document.getElementById('folder-grid');
-  let html=folders.map(f=>{
-    const c=COLORS[f.color]||COLORS[0];
-    const total=f.cards.length, done=f.cards.filter(c=>c.box===4).length;
-    return`<div class="folder-card" onclick="window._openFolder('${f.id}')">
-      <div class="folder-icon" style="background:${c.bg}">${folderSVG(c.icon)}</div>
-      <div class="folder-name">${esc(f.name)}</div>
-      <div class="folder-meta">${total} kart · ${done} öğrenildi</div>
-    </div>`;
-  }).join('');
-  html+=`<div class="folder-card folder-add" onclick="showNewFolder()">
-    <div class="folder-add-icon">+</div>
-    <div class="folder-add-text">Yeni set oluştur</div>
-  </div>`;
-  g.innerHTML=html;
-}
-window._openFolder=function(id){ openFolder(id); };
-
-function folderSVG(color){
-  return`<svg width="22" height="18" viewBox="0 0 22 18" fill="none"><path d="M1 3.5C1 2.4 1.9 1.5 3 1.5H8.5L10.5 3.5H19C20.1 3.5 21 4.4 21 5.5V15C21 16.1 20.1 17 19 17H3C1.9 17 1 16.1 1 15V3.5Z" fill="${color}" opacity="0.25"/><path d="M1 6.5H21V15C21 16.1 20.1 17 19 17H3C1.9 17 1 16.1 1 15V6.5Z" fill="${color}" opacity="0.6"/></svg>`;
-}
-
-/* ── Render: folder ── */
-function renderFolder(){
-  if(!selFolder) return;
-  document.getElementById('fh-title').textContent=selFolder.name;
-  const total=selFolder.cards.length, done=selFolder.cards.filter(c=>c.box===4).length;
-  document.getElementById('fh-meta').textContent=total+' kart · '+done+' kalıcı hafızada';
-  renderBoxes(); renderCardsList();
-}
-
-function renderBoxes(){
-  const boxes=[0,1,2,3,4].map(b=>selFolder.cards.filter(c=>c.box===b).length);
-  document.getElementById('leitner-boxes').innerHTML=boxes.map((count,i)=>{
-    const lc=LBC[i];
-    return`<div class="lbox" style="background:${lc.bg}">
-      <div class="lbox-num" style="color:${lc.num}">Kutu ${i+1}</div>
-      <div class="lbox-count" style="color:${lc.cnt}">${count}</div>
-      <div class="lbox-freq" style="color:${lc.cnt}">${LFREQ[i]}</div>
-    </div>`;
-  }).join('');
-}
-
-function setAddMode(mode){
-  document.getElementById('tab-single').classList.toggle('active',mode==='single');
-  document.getElementById('tab-bulk').classList.toggle('active',mode==='bulk');
-  document.getElementById('add-single').style.display=mode==='single'?'block':'none';
-  document.getElementById('add-bulk').style.display=mode==='bulk'?'block':'none';
-}
-
-async function addCard(){
-  const f=document.getElementById('a-front').value.trim();
-  const b=document.getElementById('a-back').value.trim();
-  const imgInput=document.getElementById('a-image');
-  if(!f||!b){ alert('Ön ve arka yüzü doldurmalısın!'); return; }
-
-  const btn = document.getElementById('btn-add-card');
-  btn.disabled = true;
-  btn.textContent = 'Yükleniyor...';
-
-  let imageUrl = null;
-  if(imgInput.files.length > 0) {
-    const file = imgInput.files[0];
-    const storageRef = ref(storage, `users/${currentUser.uid}/${Date.now()}_${file.name}`);
-    try {
-      const snapshot = await uploadBytes(storageRef, file);
-      imageUrl = await getDownloadURL(snapshot.ref);
-    } catch(e) {
-      console.error(e);
-      alert('Görsel yüklenirken bir hata oluştu.');
-    }
-  }
-
-  selFolder.cards.push({id:uid(),front:f,back:b,box:0, image: imageUrl});
-  saveToCloud();
-  
-  document.getElementById('a-front').value=''; 
-  document.getElementById('a-back').value='';
-  imgInput.value = '';
-  btn.disabled = false;
-  btn.textContent = 'Kartı Ekle';
-  document.getElementById('a-front').focus(); 
-  renderFolder();
-}
-
-function addBulk(){
-  const raw=document.getElementById('bulk-ta').value; let added=0;
-  raw.split('\n').forEach(line=>{
-    const t=line.trim(); if(!t) return;
-    const sep=t.indexOf('='); if(sep===-1) return;
-    const f=t.slice(0,sep).trim(), b=t.slice(sep+1).trim();
-    if(f&&b){ selFolder.cards.push({id:uid(),front:f,back:b,box:0}); added++; }
-  });
-  if(!added){ alert('Hiç geçerli satır bulunamadı.\nFormat: ön yüz = arka yüz'); return; }
-  saveToCloud();
-  document.getElementById('bulk-ta').value=''; renderFolder();
-}
-
-function delCard(id){
-  selFolder.cards=selFolder.cards.filter(c=>c.id!==id);
-  saveToCloud(); renderFolder();
-}
-
-function renderCardsList(){
-  const list=document.getElementById('cards-list');
-  if(!selFolder.cards.length){
-    list.innerHTML='<div style="text-align:center;color:#888;padding:2rem 0;font-size:14px">Henüz kart yok</div>';
-    return;
-  }
-  list.innerHTML=selFolder.cards.map(c=>`
-    <div class="card-item">
-      <div class="card-item-content">
-        ${c.image ? `<img src="${c.image}" class="card-item-img" />` : ''}
-        <div class="card-item-texts">
-          <div class="card-item-front">${esc(c.front)}</div>
-          <div class="card-item-back">${esc(c.back)}</div>
-        </div>
-      </div>
-      <button class="card-item-del" onclick="window._delCard('${c.id}')">Sil</button>
+window.renderFolders = () => {
+  const grid = document.getElementById('folder-grid');
+  grid.innerHTML = folders.map(f => `
+    <div class="folder-card" onclick="openFolder('${f.id}')">
+      <div class="folder-name">${f.name}</div>
+      <div class="folder-meta">${f.cards.length} Kart</div>
     </div>
   `).join('');
-}
-window._delCard=function(id){ delCard(id); };
+};
 
-/* ── Study mode ── */
-function startStudy(){
-  if(!selFolder||!selFolder.cards.length){ alert('Bu sette hiç kart yok!'); return; }
-  queue=[...selFolder.cards].sort(()=>Math.random()-0.5);
-  qIdx=0; sRight=0; sWrong=0;
-  document.getElementById('study-back-label').textContent=selFolder.name;
-  document.getElementById('study-active').style.display='block';
-  document.getElementById('study-done').style.display='none';
-  showPage('study'); loadCard();
-}
+window.openFolder = id => {
+  selFolder = folders.find(f => f.id === id);
+  document.getElementById('fh-title').textContent = selFolder.name;
+  renderCards();
+  showPage('folder');
+};
 
-function loadCard(){
-  if(qIdx>=queue.length){ showDone(); return; }
-  const card=queue[qIdx], total=queue.length;
-  document.getElementById('s-idx').textContent=qIdx+1;
-  document.getElementById('s-total').textContent=total;
-  document.getElementById('s-prog').style.width=Math.round((qIdx/total)*100)+'%';
-  document.getElementById('s-box-lbl').textContent='Kutu '+(card.box+1);
+window.renderCards = () => {
+  document.getElementById('cards-list').innerHTML = selFolder.cards.map(c => `
+    <div class="folder-card" style="min-height: auto; padding: 1rem">
+      <div style="font-weight:700">${c.front}</div>
+      <div style="color:var(--sub-text); font-size:13px">${c.back}</div>
+    </div>
+  `).join('');
+};
+
+// Card Management
+window.setAddMode = mode => {
+  document.getElementById('tab-single').classList.toggle('active', mode==='single');
+  document.getElementById('tab-bulk').classList.toggle('active', mode==='bulk');
+  document.getElementById('add-single').style.display = mode==='single' ? 'block' : 'none';
+  document.getElementById('add-bulk').style.display = mode==='bulk' ? 'block' : 'none';
+};
+
+window.addCard = async () => {
+  const f = document.getElementById('a-front').value;
+  const b = document.getElementById('a-back').value;
+  const imgFile = document.getElementById('a-image').files[0];
+  if(!f || !b) return;
   
-  // Front Side Texts & Img
-  document.getElementById('s-front').textContent=card.front;
-  const fImg = document.getElementById('s-front-img');
-  if(card.image) { fImg.src = card.image; fImg.style.display = 'block'; }
-  else { fImg.style.display = 'none'; fImg.src = ''; }
+  const btn = document.getElementById('btn-add-card');
+  btn.textContent = "Yükleniyor..."; btn.disabled = true;
 
-  // Back Side Texts & Img (Showing same image on back as well to solidify visual memory)
-  document.getElementById('s-back').textContent=card.back;
-  const bImg = document.getElementById('s-back-img');
-  if(card.image) { bImg.src = card.image; bImg.style.display = 'block'; }
-  else { bImg.style.display = 'none'; bImg.src = ''; }
-
-  const lc=LBC[card.box]||LBC[0];
-  const badge=document.getElementById('s-badge');
-  badge.textContent='Kutu '+(card.box+1)+' — '+LFREQ[card.box];
-  badge.style.background=lc.bg; badge.style.color=lc.cnt;
-  
-  document.getElementById('card-container').classList.remove('flipped');
-  document.getElementById('s-show-row').style.display='flex';
-  document.getElementById('s-action-row').style.display='none';
-  document.getElementById('s-correct').textContent=sRight;
-  document.getElementById('s-wrong').textContent=sWrong;
-  revealed=false;
-}
-
-function handleCardClick(){
-  if(!revealed) revealCard();
-  else document.getElementById('card-container').classList.toggle('flipped');
-}
-
-function revealCard(){
-  revealed=true;
-  document.getElementById('card-container').classList.add('flipped');
-  document.getElementById('s-show-row').style.display='none';
-  document.getElementById('s-action-row').style.display='flex';
-}
-
-function markCard(correct){
-  const card=queue[qIdx];
-  const realCard=selFolder.cards.find(c=>c.id===card.id);
-  if(correct){ sRight++; if(realCard.box<4) realCard.box++; }
-  else        { sWrong++; realCard.box=0; }
-  saveToCloud();
-  qIdx++; loadCard();
-}
-
-function showDone(){
-  document.getElementById('study-active').style.display='none';
-  document.getElementById('study-done').style.display='block';
-  document.getElementById('done-sub').innerHTML=`${sRight} doğru · ${sWrong} yanlış<br>Toplam ${queue.length} kart`;
-}
-
-/* ── Expose functions ── */
-window.toggleAuthMode = toggleAuthMode;
-window.handleAuth = handleAuth;
-window.handleLogout = handleLogout;
-window.showNewFolder = showNewFolder;
-window.goHome        = goHome;
-window.goFolder      = goFolder;
-window.createFolder  = createFolder;
-window.deleteFolder  = deleteFolder;
-window.setAddMode    = setAddMode;
-window.addCard       = addCard;
-window.addBulk       = addBulk;
-window.startStudy    = startStudy;
-window.handleCardClick = handleCardClick;
-window.revealCard    = revealCard;
-window.markCard      = markCard;
-
-/* ── Shortcuts ── */
-document.addEventListener('keydown', e => {
-  if(document.getElementById('page-study').classList.contains('active')){
-    if(e.key==='ArrowRight'||e.key===' '){ e.preventDefault(); if(!revealed) revealCard(); else markCard(true); }
-    if(e.key==='ArrowLeft'){ e.preventDefault(); if(revealed) markCard(false); }
+  let url = null;
+  if(imgFile) {
+    const sRef = ref(storage, `users/${currentUser.uid}/${Date.now()}`);
+    await uploadBytes(sRef, imgFile);
+    url = await getDownloadURL(sRef);
   }
-});
+  
+  selFolder.cards.push({front: f, back: b, image: url});
+  await setDoc(docRef, {folders});
+  
+  btn.textContent = "Kartı Kaydet"; btn.disabled = false;
+  document.getElementById('a-front').value = ''; document.getElementById('a-back').value = '';
+  document.getElementById('a-image').value = '';
+  renderCards();
+};
 
-/* ── Enter keys ── */
-document.getElementById('a-back').addEventListener('keydown', e=>{ if(e.key==='Enter') addCard(); });
-document.getElementById('nf-name').addEventListener('keydown', e=>{ if(e.key==='Enter') createFolder(); });
-document.getElementById('auth-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') handleAuth(); });
+window.addBulk = async () => {
+  const raw = document.getElementById('bulk-ta').value;
+  raw.split('\n').forEach(line => {
+    const [f, b] = line.split('=').map(s => s?.trim());
+    if(f && b) selFolder.cards.push({front: f, back: b, image: null});
+  });
+  await setDoc(docRef, {folders});
+  document.getElementById('bulk-ta').value = '';
+  renderCards();
+  alert("Aktarma başarılı!");
+};
 
+// Study Logic
+window.startStudy = () => {
+  if(selFolder.cards.length === 0) return alert("Kart eklemelisin.");
+  queue = [...selFolder.cards].sort(() => Math.random() - 0.5);
+  qIdx = 0;
+  showPage('study');
+  loadCard();
+};
+
+function loadCard() {
+  if(qIdx >= queue.length) { alert("Tebrikler, seti bitirdin!"); goFolder(); return; }
+  const c = queue[qIdx];
+  const img = document.getElementById('s-img');
+  img.style.display = c.image ? 'block' : 'none';
+  if(c.image) img.src = c.image;
+  
+  document.getElementById('s-text').textContent = c.front;
+  document.getElementById('s-hint').textContent = "Cevabı gör";
+  document.getElementById('s-action-row').style.display = 'none';
+  revealed = false;
+}
+
+window.handleCardClick = () => {
+  if(!revealed) {
+    document.getElementById('s-text').textContent = queue[qIdx].back;
+    document.getElementById('s-hint').textContent = "Ön yüze dön";
+    document.getElementById('s-action-row').style.display = 'flex';
+    revealed = true;
+  } else {
+    document.getElementById('s-text').textContent = queue[qIdx].front;
+    revealed = false;
+  }
+};
+
+window.markCard = (correct) => {
+  qIdx++;
+  loadCard();
+};
+
+// Global exports
+window.goHome = () => showPage('home');
+window.goFolder = () => showPage('folder');
+window.handleAuth = handleAuth;
+window.handleLogout = () => signOut(auth);
+window.toggleAuthMode = () => { window.isReg = !window.isReg; document.getElementById('auth-title').textContent = window.isReg ? "Kayıt Ol" : "Giriş Yap"; };
+window.deleteFolder = async () => { if(confirm("Seti silmek istediğine emin misin?")) { folders = folders.filter(f => f.id !== selFolder.id); await setDoc(docRef, {folders}); goHome(); } };
 </script>
 </body>
 </html>
