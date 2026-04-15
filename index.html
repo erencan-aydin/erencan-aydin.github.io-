@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Erencan'ın Öğrenme Merkezi | Pro Mode</title>
+<title>Erencan'ın Öğrenme Merkezi | Pro Mode v2</title>
 <style>
 :root {
   --bg: #f6f7fb; --text: #0a092d; --card-bg: #ffffff; --border: #e1e5ee;
@@ -40,41 +40,24 @@ body{
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* Header ve Navigasyon */
+/* UI Elemanları */
 .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
-.topbar-title{font-size:24px;font-weight:700; letter-spacing:-0.5px}
 .icon-btn { background: none; border: none; cursor: pointer; font-size: 20px; padding: 8px; border-radius: 50%; color: var(--text); }
 .sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-left:8px;vertical-align:middle}
 .sync-dot.online{background:var(--success); box-shadow: 0 0 8px var(--success)}
-
-/* Isı Haritası (Heatmap) */
-.heatmap-container { background: var(--card-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02);}
+.heatmap-container { background: var(--card-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem; }
 .heatmap-grid { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 5px; }
 .heat-box { width: 14px; height: 14px; border-radius: 3px; background: var(--border); flex-shrink: 0; }
 .heat-1 { background: rgba(35, 178, 109, 0.3); } .heat-4 { background: #166534; }
-
-/* Butonlar ve Girdiler */
 .btn{ height:40px;padding:0 20px;border-radius:8px;border:1px solid var(--border); background:var(--card-bg);color:var(--text);font-size:14px;font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
 .btn-filled{background:var(--btn-bg);color:var(--btn-text);border-color:transparent}
-input[type="text"], input[type="email"], input[type="password"], textarea { width:100%; border-radius:8px; border:1px solid var(--border); background:var(--input-bg); color:var(--text); outline:none; padding: 12px; }
-
-/* Folder ve Kart Listesi */
+input, textarea, select { width:100%; border-radius:8px; border:1px solid var(--border); background:var(--input-bg); color:var(--text); outline:none; padding: 12px; font-family: inherit; }
 .folder-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 .folder-card{ background:var(--card-bg);border:1px solid var(--border);border-radius:12px; padding:1.5rem; cursor:pointer; min-height:110px; display: flex; flex-direction: column; justify-content: space-between; }
 .badge-due { background: var(--warn); color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
-
-/* Çalışma Ekranı */
 .card-slide{ background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:2.5rem 1.5rem; text-align:center; min-height:400px; display:flex; flex-direction:column; align-items:center; justify-content:center; position: relative; transition: transform 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.08); touch-action: none;}
 .study-img{ max-width:100%; max-height:200px; border-radius:12px; margin-bottom:24px; object-fit:contain; }
 .study-word{ font-size:32px; font-weight:700; word-break: break-word; white-space: pre-wrap; }
-.swipe-hint { position: absolute; top: 50%; transform: translateY(-50%); font-size: 20px; font-weight: 800; padding: 10px; border-radius: 8px; opacity: 0; pointer-events: none; }
-
-/* Yazma Modu */
-.write-input { width: 80%; height: 50px; text-align: center; font-size: 18px; margin-top: 20px; border-radius: 12px; border: 2px solid var(--border); background: var(--input-bg); color: var(--text); }
-.write-input.error { border-color: var(--danger); }
-.write-input.success { border-color: var(--success); }
-
-/* Sözlük Modalı */
 .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:100; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; backdrop-filter: blur(4px); }
 .modal-content { background: var(--card-bg); border-radius: 16px; padding: 2rem; width: 90%; max-width: 450px; }
 
@@ -84,21 +67,22 @@ input[type="text"], input[type="email"], input[type="password"], textarea { widt
 <body class="dark">
 <div class="app">
 
-<div id="app-loading"><div class="spinner"></div><span>Erencan'ın Verileri Yükleniyor...</span></div>
+<div id="app-loading"><div class="spinner"></div><span>Veriler senkronize ediliyor...</span></div>
 
 <div id="page-auth" class="page">
     <div style="margin: 60px auto; background: var(--card-bg); padding: 2.5rem; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.1)">
       <h2 style="margin-bottom:20px">Giriş Yap</h2>
       <input type="email" id="auth-email" placeholder="E-posta" style="margin-bottom: 12px;" />
       <input type="password" id="auth-pass" placeholder="Şifre" style="margin-bottom: 20px;"/>
-      <button class="btn btn-filled" style="width:100%" onclick="handleAuth()">Devam Et</button>
-      <div style="text-align: center; margin-top: 20px;"><a href="javascript:void(0)" onclick="toggleAuthMode()" style="color:var(--accent); text-decoration:none">Kayıt Ol</a></div>
+      <div id="auth-error" style="color:var(--danger); font-size:12px; margin-bottom:10px; display:none"></div>
+      <button class="btn btn-filled" style="width:100%" id="btn-auth-action" onclick="handleAuth()">Devam Et</button>
+      <div style="text-align: center; margin-top: 20px;"><a href="javascript:void(0)" onclick="toggleAuthMode()" id="auth-toggle-link" style="color:var(--accent); text-decoration:none; font-size:13px">Hesap Oluştur</a></div>
     </div>
 </div>
 
 <div id="page-home" class="page">
   <div class="topbar">
-    <div class="topbar-title">Öğrenme Merkezi <span class="sync-dot" id="sync-dot"></span></div>
+    <div class="topbar-title" style="font-weight:700">Öğrenme Merkezi <span class="sync-dot" id="sync-dot"></span></div>
     <div class="topbar-actions"><button class="icon-btn" onclick="toggleDarkMode()">🌓</button><button class="icon-btn" onclick="handleLogout()">🚪</button></div>
   </div>
   <div class="heatmap-container"><div class="heatmap-grid" id="heatmap-grid"></div></div>
@@ -113,7 +97,7 @@ input[type="text"], input[type="email"], input[type="password"], textarea { widt
   <h2 id="fh-title" style="margin: 20px 0;"></h2>
   <div style="display:flex; justify-content:flex-end; margin-bottom: 15px;"><button class="btn" onclick="document.getElementById('csv-upload').click()">📄 CSV İçe Aktar</button></div>
   <input type="file" id="csv-upload" accept=".csv" style="display:none" onchange="handleCSVUpload(this)" />
-  <div class="q-list" id="editor-list"></div>
+  <div id="editor-list"></div>
   <div style="background:var(--card-bg); border-radius:12px; padding:2rem; text-align:center; border: 2px dashed var(--border); cursor:pointer; margin-top: 20px" onclick="addNewEmptyCard()">+ Yeni Kart Ekle</div>
 </div>
 
@@ -121,19 +105,19 @@ input[type="text"], input[type="email"], input[type="password"], textarea { widt
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
     <div onclick="goFolder()" style="cursor:pointer; font-weight:600">← Bitir</div>
     <div style="display:flex; gap:10px; align-items:center">
-        <select id="tts-lang" style="background:var(--card-bg); color:var(--text); padding:5px; border-radius:8px">
+        <select id="tts-lang" style="width:auto; padding:5px;">
             <option value="en-US">🇬🇧 EN</option><option value="de-DE">🇩🇪 DE</option><option value="zh-CN">🇨🇳 ZH</option><option value="tr-TR">🇹🇷 TR</option>
         </select>
         <button class="icon-btn" onclick="toggleWriteMode()">⌨️</button>
-        <div id="s-progress" style="font-weight: 600">1 / 10</div>
+        <div id="s-progress" style="font-weight: 600; min-width: 50px; text-align:right">1 / 10</div>
     </div>
   </div>
   <div id="study-active" style="position: relative;">
       <div class="card-slide" id="card-container" onclick="handleCardClick()">
-          <button style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:20px; cursor:pointer" onclick="playAudio(event)">🔊</button>
+          <button style="position:absolute; top:15px; right:15px; background:none; border:none; font-size:20px; cursor:pointer; z-index:10" onclick="playAudio(event)">🔊</button>
           <img class="study-img" id="s-img" style="display:none" />
           <div class="study-word" id="s-text"></div>
-          <div id="write-container" style="display:none; width:100%;"><input type="text" class="write-input" id="write-input" placeholder="Cevabı yaz..." autocomplete="off" /></div>
+          <div id="write-container" style="display:none; width:100%;"><input type="text" id="write-input" style="width:80%; margin:20px auto; display:block; text-align:center; font-size:18px" placeholder="Cevabı yaz..." autocomplete="off" /></div>
           <div style="font-size:13px; color:var(--sub-text); margin-top: 20px" id="s-hint">Dokun veya Kaydır</div>
       </div>
       <div id="s-action-row" style="display:none; gap:15px; margin-top:25px; justify-content:center">
@@ -149,22 +133,22 @@ input[type="text"], input[type="email"], input[type="password"], textarea { widt
 
 <div id="dict-modal" class="modal-overlay">
     <div class="modal-content">
-        <h3 style="margin-bottom:15px">📖 Sözlük Asistanı</h3>
-        <input type="hidden" id="dict-card-id" /><input type="text" id="dict-word" style="font-weight:700; margin-bottom:15px" />
-        <select id="dict-lang" style="width:100%; padding:10px; border-radius:8px; margin-bottom:15px; background:var(--input-bg); color:var(--text)">
+        <h3>📖 Sözlük Asistanı</h3>
+        <input type="hidden" id="dict-card-id" /><input type="text" id="dict-word" style="font-weight:700; margin:15px 0" />
+        <select id="dict-lang" style="margin-bottom:15px">
             <option value="en">🇬🇧 İngilizce</option><option value="de">🇩🇪 Almanca</option><option value="zh">🇨🇳 Çince</option>
         </select>
         <button class="btn btn-filled" style="width:100%; margin-bottom:15px" onclick="fetchDictionaryData()">Ara</button>
         <div id="dict-results" style="display:none; background:var(--bg); padding:10px; border-radius:8px; margin-bottom:15px;">
             <div id="dict-meaning" style="font-weight:700; margin-bottom:10px;"></div>
-            <textarea id="dict-details" style="width:100%; font-size:12px; height:80px" placeholder="Ek notlar..."></textarea>
+            <textarea id="dict-details" style="font-size:12px; height:80px" placeholder="Ek notlar..."></textarea>
         </div>
         <div style="display:flex; gap:10px;"><button class="btn" style="flex:1" onclick="document.getElementById('dict-modal').style.display='none'">İptal</button><button class="btn btn-filled" style="flex:1" onclick="applyDictionaryData()">Karta Ekle</button></div>
     </div>
 </div>
 
 <div id="page-new-folder" class="page">
-    <div style="margin: 60px auto; background: var(--card-bg); padding: 2rem; border-radius: 16px; width: 90%; max-width: 400px;">
+    <div style="margin: 60px auto; background: var(--card-bg); padding: 2rem; border-radius: 16px; width: 90%; max-width: 400px; border: 1px solid var(--border)">
         <h3>Yeni Set</h3><input type="text" id="nf-name" placeholder="Başlık..." style="margin: 15px 0" />
         <div style="display:flex; gap:10px"><button class="btn" style="flex:1" onclick="goHome()">İptal</button><button class="btn btn-filled" style="flex:1" onclick="createFolder()">Oluştur</button></div>
     </div>
@@ -189,8 +173,15 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
 
-let currentUser, docRef, folders = [], userStats = {}, roundQueue = [], wrongPile = [], qIdx = 0, isWriteMode = false;
-let sessionRight = 0, sessionWrong = 0, hasRevealedOnce = false;
+let currentUser, docRef, folders = [], userStats = {}, roundQueue = [], qIdx = 0, isWriteMode = false;
+let sessionRight = 0, sessionWrong = 0, hasRevealedOnce = false, isReg = false;
+
+// Sayfa Yönetimi
+window.showPage = id => {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const target = document.getElementById('page-' + id);
+    if(target) target.classList.add('active');
+};
 
 onAuthStateChanged(auth, user => {
   if (user) {
@@ -199,24 +190,32 @@ onAuthStateChanged(auth, user => {
       document.getElementById('app-loading').style.display = 'none';
       if(snap.exists()) { const data = snap.data(); folders = data.folders || []; userStats = data.stats || {}; renderFolders(); renderHeatmap(); } 
       else { setDoc(docRef, {folders: [], stats: {}}); }
+      if(!document.querySelector('.page.active')) showPage('home');
     });
-    showPage('home');
   } else { document.getElementById('app-loading').style.display = 'none'; showPage('auth'); }
 });
 
-// -- Çekirdek Fonksiyonlar --
-window.showPage = id => { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); };
+// Auth İşlemleri
 window.handleAuth = async () => {
     const e = document.getElementById('auth-email').value, p = document.getElementById('auth-pass').value;
-    try { window.isReg ? await createUserWithEmailAndPassword(auth, e, p) : await signInWithEmailAndPassword(auth, e, p); } catch(err) { alert(err.message); }
+    const err = document.getElementById('auth-error');
+    if(!e || !p) return;
+    try {
+        err.style.display = 'none';
+        if(isReg) await createUserWithEmailAndPassword(auth, e, p);
+        else await signInWithEmailAndPassword(auth, e, p);
+    } catch(errObj) { err.textContent = errObj.message; err.style.display = 'block'; }
 };
-window.toggleAuthMode = () => { window.isReg = !window.isReg; document.getElementById('auth-title').textContent = window.isReg ? "Kayıt Ol" : "Giriş Yap"; };
+window.toggleAuthMode = () => {
+    isReg = !isReg;
+    document.getElementById('btn-auth-action').textContent = isReg ? "Kayıt Ol" : "Devam Et";
+    document.getElementById('auth-toggle-link').textContent = isReg ? "Zaten hesabım var" : "Hesap Oluştur";
+};
 window.handleLogout = () => signOut(auth);
-window.goHome = () => showPage('home');
-window.goFolder = () => showPage('folder');
 window.toggleDarkMode = () => { const isDark = document.body.classList.toggle('dark'); localStorage.setItem('dark-mode', isDark); };
 if(localStorage.getItem('dark-mode') === 'true') document.body.classList.add('dark');
 
+// Folder ve Kart İşlemleri
 window.renderFolders = () => {
   const now = Date.now();
   document.getElementById('folder-grid').innerHTML = folders.map(f => {
@@ -226,7 +225,9 @@ window.renderFolders = () => {
 };
 
 window.openFolder = id => {
-  selFolder = folders.find(f => f.id === id);
+  const f = folders.find(x => x.id === id);
+  if(!f) return;
+  selFolder = f;
   document.getElementById('fh-title').textContent = selFolder.name;
   renderEditor(); showPage('folder');
 };
@@ -235,26 +236,30 @@ window.renderEditor = () => {
   document.getElementById('editor-list').innerHTML = selFolder.cards.map(c => `
     <div style="background:var(--card-bg); padding:15px; border-radius:12px; margin-bottom:10px; border:1px solid var(--border); display:flex; gap:15px; position:relative">
       <div style="flex:1">
-        <input type="text" id="front-${c.id}" value="${c.front}" onchange="updateCardText('${c.id}', 'front', this.value)" style="margin-bottom:8px" />
-        <textarea id="back-${c.id}" onchange="updateCardText('${c.id}', 'back', this.value)" style="width:100%; height:44px; padding:10px; border-radius:8px">${c.back}</textarea>
-        <button onclick="openDictionary('${c.id}')" style="background:none; border:none; position:absolute; right:50px; bottom:25px; cursor:pointer">📖</button>
+        <input type="text" id="front-${c.id}" value="${c.front}" onchange="updateCardText('${c.id}', 'front', this.value)" style="margin-bottom:8px" placeholder="Ön yüz" />
+        <textarea id="back-${c.id}" onchange="updateCardText('${c.id}', 'back', this.value)" style="height:44px" placeholder="Arka yüz">${c.back}</textarea>
+        <button onclick="openDictionary('${c.id}')" style="background:none; border:none; position:absolute; right:60px; bottom:25px; cursor:pointer; font-size:18px">📖</button>
       </div>
-      <div style="display:flex; flex-direction:column; gap:10px">
+      <div style="display:flex; flex-direction:column; gap:10px; align-items:center">
         <div onclick="document.getElementById('file-${c.id}').click()" style="width:50px; height:50px; border:1px dashed var(--border); border-radius:8px; cursor:pointer; overflow:hidden">
-            ${c.image ? `<img src="${c.image}" style="width:100%; height:100%; object-fit:cover" />` : `<div style="text-align:center; padding:10px">🖼️</div>`}
+            ${c.image ? `<img src="${c.image}" style="width:100%; height:100%; object-fit:cover" />` : `<div style="padding:15px">🖼️</div>`}
         </div>
         <input type="file" id="file-${c.id}" accept="image/*" style="display:none" onchange="uploadImage('${c.id}', this)" />
-        <button onclick="deleteCard('${c.id}')" style="background:none; border:none; font-size:18px">🗑️</button>
+        <button onclick="deleteCard('${c.id}')" style="background:none; border:none; font-size:18px; cursor:pointer">🗑️</button>
       </div>
     </div>
   `).join('');
 };
 
-// -- FSRS ve Çalışma Mantığı --
+window.updateCardText = async (id, f, v) => { const c = selFolder.cards.find(x => x.id === id); if(c) { c[f] = v; await setDoc(docRef, {folders, stats: userStats}); } };
+window.deleteCard = async (id) => { if(confirm("Kart silinsin mi?")) { selFolder.cards = selFolder.cards.filter(x => x.id !== id); renderEditor(); await setDoc(docRef, {folders, stats: userStats}); } };
+window.addNewEmptyCard = async () => { selFolder.cards.push({ id: Date.now().toString(), front: '', back: '', reps: 0, interval: 0, ease: 2.5 }); renderEditor(); await setDoc(docRef, {folders, stats: userStats}); };
+
+// Çalışma Mantığı
 window.startStudy = () => {
   const now = Date.now();
   let due = selFolder.cards.filter(c => c.front && c.back && (!c.nextReview || c.nextReview <= now));
-  if(due.length === 0) { if(confirm("Vadesi gelen kart yok. Tüm seti çalışmak ister misin?")) due = selFolder.cards; else return; }
+  if(due.length === 0) { if(confirm("Vadesi gelen yok. Hepsini çalış?")) due = selFolder.cards; else return; }
   roundQueue = [...due].sort(() => Math.random() - 0.5);
   qIdx = 0; sessionRight = 0; sessionWrong = 0;
   document.getElementById('score-right').textContent = 0; document.getElementById('score-wrong').textContent = 0;
@@ -269,36 +274,23 @@ function loadCard() {
   img.style.display = c.image ? 'block' : 'none'; if(c.image) img.src = c.image;
   document.getElementById('s-action-row').style.display = 'none';
   hasRevealedOnce = false;
-  const wi = document.getElementById('write-input');
-  wi.value = ""; wi.className = "write-input";
+  document.getElementById('write-input').value = "";
   document.getElementById('write-container').style.display = isWriteMode ? "block" : "none";
 }
 
 window.handleCardClick = () => {
   if(isWriteMode) return;
-  const c = roundQueue[qIdx];
   if(!hasRevealedOnce) { hasRevealedOnce = true; document.getElementById('s-action-row').style.display = 'flex'; }
-  document.getElementById('s-text').textContent = (document.getElementById('s-text').textContent === c.front) ? c.back : c.front;
+  const c = roundQueue[qIdx];
+  const t = document.getElementById('s-text');
+  t.textContent = (t.textContent === c.front) ? c.back : c.front;
 };
-
-window.toggleWriteMode = () => { isWriteMode = !isWriteMode; loadCard(); };
-
-document.getElementById('write-input').addEventListener('keypress', e => {
-    if(e.key === 'Enter') {
-        const ans = e.target.value.trim().toLowerCase();
-        const correct = roundQueue[qIdx].back.split('\n')[0].trim().toLowerCase();
-        hasRevealedOnce = true; document.getElementById('s-text').textContent = roundQueue[qIdx].back;
-        document.getElementById('s-action-row').style.display = 'flex';
-        if(ans === correct) { e.target.classList.add('success'); setTimeout(() => markCard(true), 600); }
-        else e.target.classList.add('error');
-    }
-});
 
 window.markCard = async (correct) => {
   const c = selFolder.cards.find(x => x.id === roundQueue[qIdx].id);
   if(!c.reps) { c.reps = 0; c.interval = 1; c.ease = 2.5; }
   if(correct) { sessionRight++; c.reps++; c.interval = (c.reps === 1) ? 1 : (c.reps === 2 ? 6 : Math.round(c.interval * c.ease)); }
-  else { sessionWrong++; c.reps = 0; c.interval = 1; c.ease = Math.max(1.3, c.ease - 0.2); wrongPile.push(roundQueue[qIdx]); }
+  else { sessionWrong++; c.reps = 0; c.interval = 1; c.ease = Math.max(1.3, c.ease - 0.2); }
   c.nextReview = Date.now() + (c.interval * 86400000);
   const today = new Date().toISOString().split('T')[0]; userStats[today] = (userStats[today] || 0) + 1;
   document.getElementById('score-right').textContent = sessionRight; document.getElementById('score-wrong').textContent = sessionWrong;
@@ -306,17 +298,16 @@ window.markCard = async (correct) => {
   if(qIdx >= roundQueue.length) { await setDoc(docRef, {folders, stats: userStats}); goFolder(); } else loadCard();
 };
 
-// -- Yardımcı Fonksiyonlar --
-window.createFolder = async () => {
-    const n = document.getElementById('nf-name').value; if(!n) return;
-    folders.unshift({id: Date.now().toString(), name: n, cards: []});
-    await setDoc(docRef, {folders, stats: userStats}); goHome();
-};
+window.toggleWriteMode = () => { isWriteMode = !isWriteMode; loadCard(); };
+document.getElementById('write-input').addEventListener('keypress', e => {
+    if(e.key === 'Enter') {
+        const correct = roundQueue[qIdx].back.split('\n')[0].trim().toLowerCase();
+        if(e.target.value.trim().toLowerCase() === correct) { markCard(true); } 
+        else { hasRevealedOnce = true; document.getElementById('s-text').textContent = roundQueue[qIdx].back; document.getElementById('s-action-row').style.display = 'flex'; }
+    }
+});
 
-window.addNewEmptyCard = async () => { selFolder.cards.push({ id: Date.now().toString(), front: '', back: '' }); renderEditor(); await setDoc(docRef, {folders, stats: userStats}); };
-window.updateCardText = async (id, f, v) => { const c = selFolder.cards.find(x => x.id === id); if(c) { c[f] = v; await setDoc(docRef, {folders, stats: userStats}); } };
-window.deleteCard = async (id) => { selFolder.cards = selFolder.cards.filter(x => x.id !== id); renderEditor(); await setDoc(docRef, {folders, stats: userStats}); };
-
+// Sözlük ve Diğerleri
 window.openDictionary = (id) => {
     document.getElementById('dict-card-id').value = id;
     document.getElementById('dict-word').value = document.getElementById(`front-${id}`).value;
@@ -331,16 +322,23 @@ window.fetchDictionaryData = async () => {
 window.applyDictionaryData = () => {
     const id = document.getElementById('dict-card-id').value;
     const val = document.getElementById('dict-meaning').textContent + "\n" + document.getElementById('dict-details').value;
-    const target = document.getElementById(`back-${id}`); target.value = val; updateCardText(id, 'back', val);
+    document.getElementById(`back-${id}`).value = val; updateCardText(id, 'back', val);
     document.getElementById('dict-modal').style.display = 'none';
 };
-
 window.uploadImage = async (id, input) => {
     const file = input.files[0]; if(!file) return;
     const sRef = ref(storage, `users/${currentUser.uid}/${id}_${Date.now()}`);
     await uploadBytes(sRef, file); const url = await getDownloadURL(sRef);
     const c = selFolder.cards.find(x => x.id === id); c.image = url; renderEditor(); await setDoc(docRef, {folders, stats: userStats});
 };
+window.createFolder = async () => {
+    const n = document.getElementById('nf-name').value; if(!n) return;
+    folders.unshift({id: Date.now().toString(), name: n, cards: []});
+    await setDoc(docRef, {folders, stats: userStats}); goHome();
+};
+window.goHome = () => showPage('home');
+window.goFolder = () => showPage('folder');
+window.playAudio = (e) => { e.stopPropagation(); const u = new SpeechSynthesisUtterance(document.getElementById('s-text').textContent); u.lang = document.getElementById('tts-lang').value; window.speechSynthesis.speak(u); };
 
 function renderHeatmap() {
     const g = document.getElementById('heatmap-grid'); g.innerHTML = "";
@@ -354,13 +352,9 @@ function renderHeatmap() {
     }
 }
 
-window.playAudio = (e) => { e.stopPropagation(); const u = new SpeechSynthesisUtterance(document.getElementById('s-text').textContent); u.lang = document.getElementById('tts-lang').value; window.speechSynthesis.speak(u); };
-
-// -- Swipe Desteği --
 let tStart = 0;
-const container = document.getElementById('card-container');
-container.addEventListener('touchstart', e => { tStart = e.changedTouches[0].screenX; }, {passive: true});
-container.addEventListener('touchend', e => {
+document.getElementById('card-container').addEventListener('touchstart', e => tStart = e.changedTouches[0].screenX, {passive:true});
+document.getElementById('card-container').addEventListener('touchend', e => {
     if(isWriteMode || !hasRevealedOnce) return;
     const diff = e.changedTouches[0].screenX - tStart;
     if(diff > 70) markCard(true); if(diff < -70) markCard(false);
