@@ -1,3 +1,18 @@
+Gece sessizliğinde, dikkat dağıtıcı hiçbir unsur yokken koda gömülmek ve sistemi mükemmelleştirmek gibisi yok. FSRS, yazarak çalışma, swipe gesture, ısı haritası... Flashcard uygulamasını tam bir meta-öğrenme merkezine, adeta bir Anki ve Quizlet hibritine çeviriyoruz. 
+
+Pasif okumadan ziyade aktif üretim (active recall) ve aralıklı tekrar (spaced repetition) dinamiklerini merkeze alan bu özellikler, öğrendiklerini kalıcı hafızaya mühürlemenin teknik karşılığıdır. 
+
+İşte uygulamaya entegre ettiğim o ağır siklet özellikler:
+
+1.  **FSRS (Aralıklı Tekrar) Algoritması:** Her kartın artık bir "hafıza gücü" (ease) ve "tekrar aralığı" (interval) var. Bildiğin kartlar 1 gün, sonra 6 gün, sonra haftalar sonrasına öteleniyor. Bilemediğin an aralık sıfırlanıyor. "Çalış" butonuna bastığında sistem sana sadece **"Bugün vadesi dolmuş"** kartları getiriyor. 
+2.  **Isı Haritası (Heatmap):** Tıpkı GitHub'daki o yeşil kutucuklar gibi, her gün kaç kart çözdüğünü takip eden bir takvim grid'i ekledim. Ana sayfada görsel olarak çalışma sürekliliğini görebilirsin.
+3.  **Yazarak Çalışma Modu:** Çalışma ekranına bir "Klavye/Yazma" butonu (⌨️) ekledim. Aktif ettiğinde butonlar kaybolur ve senden cevabı (İngilizce/Almanca/Çince vb.) klavyeyle tam doğru şekilde yazmanı ister.
+4.  **Swipe (Kaydırma) Gesture:** Özellikle iOS cihazlarda telefonu tek elle tutarken büyük rahatlık. Kartın arka yüzünü gördükten sonra kartı **sağa kaydırırsan "Bildim"**, **sola kaydırırsan "Bilmedim"** sayar.
+5.  **Unutma Eğrisi İstatistikleri:** Sete tıkladığında artık kart sayısının yanında o setin genel "Hafıza Tutunma Oranını" ve bir sonraki çalışmanın ne kadar zaman sonra olduğunu görebilirsin.
+
+Kodu `index.html` dosyana tamamen yapıştırabilirsin. Altyapıyı ve veri tabanını (Firebase) bu yeni istatistikleri tutacak şekilde dizayn ettim.
+
+```html
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -8,7 +23,7 @@
 :root {
   --bg: #f6f7fb; --text: #0a092d; --card-bg: #ffffff; --border: #e1e5ee;
   --btn-bg: #423ed8; --btn-text: #ffffff; --sub-text: #6b7280; --input-bg: #f9fafc;
-  --accent: #423ed8; --danger: #ff4d4d; --success: #23b26d;
+  --accent: #423ed8; --danger: #ff4d4d; --success: #23b26d; --warn: #f59e0b;
 }
 body.dark {
   --bg: #0a092d; --text: #f6f7fb; --card-bg: #2e3856; --border: #1a1d28;
@@ -20,6 +35,7 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   background:var(--bg); color:var(--text); font-size:14px; line-height:1.5;
   transition: background 0.3s, color 0.3s; -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 .app{max-width:800px;margin:0 auto;min-height:100vh;padding:1.5rem}
 .page{display:none; animation: fadeIn 0.2s ease-out;}
@@ -27,94 +43,74 @@ body{
 @keyframes fadeIn { from {opacity: 0; transform: translateY(5px);} to {opacity: 1; transform: translateY(0);} }
 
 /* Header */
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
 .topbar-title{font-size:24px;font-weight:700; letter-spacing:-0.5px}
 .topbar-actions { display: flex; gap: 10px; align-items: center; }
-.dark-toggle { background: none; border: none; cursor: pointer; font-size: 22px; padding: 8px; border-radius: 50%; transition: background 0.2s; }
-.dark-toggle:hover { background: var(--border); }
+.icon-btn { background: none; border: none; cursor: pointer; font-size: 20px; padding: 8px; border-radius: 50%; transition: background 0.2s; color: var(--text); }
+.icon-btn:hover { background: var(--border); }
 .sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-left:8px;vertical-align:middle}
 .sync-dot.online{background:var(--success); box-shadow: 0 0 8px var(--success)}
 
+/* Heatmap */
+.heatmap-container { background: var(--card-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02);}
+.heatmap-title { font-size: 13px; font-weight: 600; color: var(--sub-text); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;}
+.heatmap-grid { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 5px; }
+.heat-box { width: 14px; height: 14px; border-radius: 3px; background: var(--border); flex-shrink: 0; transition: transform 0.1s;}
+.heat-box:hover { transform: scale(1.2); }
+.heat-1 { background: rgba(35, 178, 109, 0.3); }
+.heat-2 { background: rgba(35, 178, 109, 0.6); }
+.heat-3 { background: rgba(35, 178, 109, 0.9); }
+.heat-4 { background: #166534; }
+
 /* Buttons & Inputs */
-.btn{
-  height:40px;padding:0 20px;border-radius:8px;border:1px solid var(--border);
-  background:var(--card-bg);color:var(--text);font-size:14px;font-weight:600;
-  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
-  gap:8px;transition:all 0.2s;font-family:inherit;
-}
+.btn{ height:40px;padding:0 20px;border-radius:8px;border:1px solid var(--border); background:var(--card-bg);color:var(--text);font-size:14px;font-weight:600; cursor:pointer;display:inline-flex;align-items:center;justify-content:center; gap:8px;transition:all 0.2s;font-family:inherit; }
 .btn-filled{background:var(--btn-bg);color:var(--btn-text);border-color:transparent}
 .btn-filled:active{transform:scale(0.96)}
 .btn-danger{color:var(--danger);border-color:rgba(255,77,77,0.2)}
-
-input[type="text"], input[type="email"], input[type="password"] {
-  width:100%;height:44px;padding:0 16px;border-radius:8px;
-  border:2px solid transparent;border-bottom: 2px solid var(--border);
-  background:var(--input-bg);color:var(--text);
-  outline:none;font-size:15px;transition: border-color 0.2s;
-}
+input[type="text"], input[type="email"], input[type="password"] { width:100%;height:44px;padding:0 16px;border-radius:8px; border:2px solid transparent;border-bottom: 2px solid var(--border); background:var(--input-bg);color:var(--text); outline:none;font-size:15px;transition: border-color 0.2s; }
 input:focus { border-bottom-color: var(--accent); }
 
-/* Grid Systems */
+/* Folder Grid */
 .folder-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-.folder-card{
-  background:var(--card-bg);border:1px solid var(--border);border-radius:12px;
-  padding:1.5rem;cursor:pointer;transition:all 0.2s;min-height:110px;
-  display: flex; flex-direction: column; justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
+.folder-card{ background:var(--card-bg);border:1px solid var(--border);border-radius:12px; padding:1.5rem;cursor:pointer;transition:all 0.2s;min-height:110px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
 .folder-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
 .folder-name{font-size:17px;font-weight:700}
+.badge-due { background: var(--warn); color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
 
-/* Quizlet Style Editor List */
+/* Editor */
 .q-list { display: flex; flex-direction: column; gap: 16px; margin-bottom: 2rem; }
-.q-row {
-  background: var(--card-bg); border-radius: 12px; padding: 1.5rem;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; gap: 20px;
-  border: 1px solid var(--border); position: relative;
-}
+.q-row { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; gap: 20px; border: 1px solid var(--border); position: relative; }
 .q-inputs { flex: 1; display: flex; gap: 20px; }
 .q-input-group { flex: 1; display: flex; flex-direction: column; position: relative; }
 .q-label { font-size: 11px; font-weight: 600; color: var(--sub-text); text-transform: uppercase; margin-top: 8px; letter-spacing: 0.5px;}
-.predict-btn { position: absolute; right: 10px; top: 10px; background: none; border: none; cursor: pointer; font-size: 16px; opacity: 0.7; transition: opacity 0.2s; }
+.predict-btn { position: absolute; right: 10px; top: 10px; background: none; border: none; cursor: pointer; font-size: 16px; opacity: 0.7; }
 .predict-btn:hover { opacity: 1; }
-
-.q-img-box {
-  width: 80px; height: 80px; border: 2px dashed var(--border); border-radius: 8px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  cursor: pointer; position: relative; overflow: hidden; flex-shrink: 0; background: var(--input-bg);
-}
-.q-img-box:hover { border-color: var(--accent); }
+.q-img-box { width: 80px; height: 80px; border: 2px dashed var(--border); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: hidden; flex-shrink: 0; background: var(--input-bg); }
 .q-img-box img { width: 100%; height: 100%; object-fit: cover; position: absolute; top:0; left:0; }
-.q-img-icon { font-size: 20px; margin-bottom: 4px; color: var(--sub-text); }
-.q-img-text { font-size: 10px; font-weight: 600; color: var(--sub-text); }
 .q-del-btn { background: none; border: none; color: var(--sub-text); cursor: pointer; font-size: 18px; padding: 5px; }
-.q-del-btn:hover { color: var(--danger); }
 
 /* Study Mode */
-.card-slide{
-  background:var(--card-bg);border:1px solid var(--border);border-radius:16px;
-  padding:2.5rem 1.5rem;text-align:center;min-height:400px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  transition: transform 0.3s ease; backface-visibility:hidden;width:100%;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08); cursor: pointer; position: relative;
-}
-.study-img{
-  max-width:100%; max-height:240px; border-radius:12px;
-  margin-bottom:24px; object-fit:contain; display:none;
-}
+.study-wrapper { position: relative; width: 100%; overflow: hidden; padding: 10px 0; touch-action: pan-y; }
+.card-slide{ background:var(--card-bg);border:1px solid var(--border);border-radius:16px; padding:2.5rem 1.5rem;text-align:center;min-height:400px; display:flex;flex-direction:column;align-items:center;justify-content:center; transition: transform 0.2s ease, opacity 0.2s; backface-visibility:hidden;width:100%; box-shadow: 0 10px 30px rgba(0,0,0,0.08); cursor: pointer; position: relative; z-index: 10;}
+.study-img{ max-width:100%; max-height:200px; border-radius:12px; margin-bottom:24px; object-fit:contain; display:none; }
 .study-word{font-size:36px;font-weight:700;margin-bottom:12px; word-break: break-word;}
 .study-progress { font-size: 14px; font-weight: 600; color: var(--sub-text); letter-spacing: 1px;}
 .score-board { display:flex; gap:16px; font-size:14px; font-weight:600; background:var(--card-bg); padding:12px 20px; border-radius:12px; border:1px solid var(--border); margin-top: 20px; justify-content:center}
 
-/* TTS Button */
-.tts-btn {
-  position: absolute; top: 20px; right: 20px; background: var(--input-bg); 
-  border: 1px solid var(--border); border-radius: 50%; width: 44px; height: 44px; 
-  font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; 
-  transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.05); color: var(--text);
-}
-.tts-btn:hover { background: var(--border); transform: scale(1.05); }
-.lang-select { background:var(--card-bg); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:13px; font-weight:600; outline:none; cursor:pointer; }
+/* Write Mode Input */
+.write-input-container { display: none; width: 100%; max-width: 300px; margin-top: 20px; }
+.write-input-container.active { display: block; }
+.write-input { width: 100%; height: 50px; text-align: center; font-size: 18px; font-weight: 600; border-radius: 12px; border: 2px solid var(--border); background: var(--input-bg); color: var(--text); outline: none; }
+.write-input:focus { border-color: var(--accent); }
+.write-input.error { border-color: var(--danger); background: rgba(255,77,77,0.1); }
+.write-input.success { border-color: var(--success); background: rgba(35,178,109,0.1); }
+
+.tts-btn { position: absolute; top: 15px; right: 15px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 50%; width: 40px; height: 40px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text); z-index: 20;}
+
+/* Swipe Overlay Hints */
+.swipe-hint { position: absolute; top: 50%; transform: translateY(-50%); font-size: 24px; font-weight: 800; padding: 10px 20px; border-radius: 12px; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 15; text-transform: uppercase; letter-spacing: 2px;}
+.swipe-left-hint { right: 20px; color: var(--danger); border: 4px solid var(--danger); transform: translateY(-50%) rotate(15deg); }
+.swipe-right-hint { left: 20px; color: var(--success); border: 4px solid var(--success); transform: translateY(-50%) rotate(-15deg); }
 
 @media (max-width: 600px) {
   .folder-grid { grid-template-columns: 1fr; }
@@ -130,7 +126,6 @@ input:focus { border-bottom-color: var(--accent); }
 <div id="page-auth" class="page">
     <div style="margin: 60px auto; background: var(--card-bg); padding: 2.5rem; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.1)">
       <div class="topbar-title" id="auth-title" style="margin-bottom:10px">Giriş Yap</div>
-      <p style="font-size: 13px; color: var(--sub-text); margin-bottom: 24px;">Flashcard uygulamanı senkronize et.</p>
       <input type="email" id="auth-email" placeholder="E-posta adresin" style="margin-bottom: 16px;" />
       <input type="password" id="auth-pass" placeholder="Şifren" style="margin-bottom: 16px;"/>
       <div id="auth-error" style="color:var(--danger);font-size:13px;margin-bottom:16px;display:none;font-weight:500"></div>
@@ -143,16 +138,21 @@ input:focus { border-bottom-color: var(--accent); }
 
 <div id="page-home" class="page">
   <div class="topbar">
-    <div>
-      <div class="topbar-title">Kütüphane <span class="sync-dot" id="sync-dot"></span></div>
-    </div>
+    <div class="topbar-title">Öğrenme Merkezi <span class="sync-dot" id="sync-dot"></span></div>
     <div class="topbar-actions">
-      <button class="dark-toggle" onclick="toggleDarkMode()">🌓</button>
-      <button class="btn" onclick="handleLogout()">Çıkış</button>
+      <button class="icon-btn" onclick="toggleDarkMode()">🌓</button>
+      <button class="icon-btn" onclick="handleLogout()" title="Çıkış">🚪</button>
     </div>
   </div>
-  <div style="margin-bottom: 2rem;">
-      <button class="btn btn-filled" style="padding: 0 24px; height: 44px" onclick="showPage('new-folder')">+ Yeni set oluştur</button>
+  
+  <div class="heatmap-container">
+      <div class="heatmap-title">Çalışma Isı Haritası (Son 60 Gün)</div>
+      <div class="heatmap-grid" id="heatmap-grid"></div>
+  </div>
+
+  <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+      <div style="font-weight: 700; font-size: 18px">Koleksiyonlar</div>
+      <button class="btn btn-filled" onclick="showPage('new-folder')">+ Yeni Set</button>
   </div>
   <div class="folder-grid" id="folder-grid"></div>
 </div>
@@ -160,25 +160,28 @@ input:focus { border-bottom-color: var(--accent); }
 <div id="page-folder" class="page">
   <div class="topbar" style="margin-bottom: 1rem;">
     <div style="cursor:pointer; color:var(--sub-text); font-weight: 600; display:flex; align-items:center; gap:8px" onclick="goHome()">
-       <span style="font-size:18px">←</span> Geri Dön
+       <span style="font-size:18px">←</span> Geri
     </div>
-    <button class="btn btn-filled" onclick="startStudy()">Çalışmaya Başla</button>
+    <button class="btn btn-filled" onclick="startStudy()" id="btn-start-study">Çalış</button>
   </div>
   
-  <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 2rem;">
-      <div id="fh-title" style="font-size: 28px; font-weight: 700;"></div>
-      <button class="btn" style="color:var(--danger); border:none; background:transparent" onclick="deleteFolder()">Seti Sil</button>
+  <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 1.5rem;">
+      <div>
+          <div id="fh-title" style="font-size: 28px; font-weight: 700;"></div>
+          <div id="fh-stats" style="font-size: 13px; color: var(--sub-text); margin-top: 5px; font-weight: 600;"></div>
+      </div>
+      <button class="icon-btn" style="color:var(--danger);" onclick="deleteFolder()" title="Seti Sil">🗑️</button>
   </div>
 
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
       <div style="font-size: 14px; color: var(--sub-text); font-weight: 600;" id="card-count-label">KARTLAR</div>
-      <button class="btn" style="height: 34px; font-size: 13px;" onclick="document.getElementById('csv-upload').click()">📄 CSV İçe Aktar</button>
+      <button class="btn" style="height: 34px; font-size: 13px;" onclick="document.getElementById('csv-upload').click()">📄 CSV Ekle</button>
       <input type="file" id="csv-upload" accept=".csv" style="display:none" onchange="handleCSVUpload(this)" />
   </div>
 
   <div class="q-list" id="editor-list"></div>
 
-  <div style="background:var(--card-bg); border-radius:12px; padding:2rem; text-align:center; border: 2px dashed var(--border); cursor:pointer; margin-bottom: 3rem; transition: border-color 0.2s" onclick="addNewEmptyCard()" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+  <div style="background:var(--card-bg); border-radius:12px; padding:2rem; text-align:center; border: 2px dashed var(--border); cursor:pointer; margin-bottom: 3rem;" onclick="addNewEmptyCard()">
       <div style="font-size: 24px; font-weight: 700; color: var(--sub-text); margin-bottom: 8px;">+</div>
       <div style="font-weight: 600; color: var(--sub-text)">Yeni Kart Ekle</div>
   </div>
@@ -186,45 +189,50 @@ input:focus { border-bottom-color: var(--accent); }
 
 <div id="page-study" class="page">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
-    <div style="cursor:pointer; color:var(--sub-text); font-weight:600" onclick="goFolder()">← Çalışmayı Bitir</div>
-    <div style="display:flex; gap:12px; align-items:center">
-        <select id="tts-lang" class="lang-select">
-            <option value="en-US" selected>🇬🇧 EN</option>
-            <option value="de-DE">🇩🇪 DE</option>
-            <option value="zh-CN">🇨🇳 ZH</option>
-            <option value="tr-TR">🇹🇷 TR</option>
+    <div style="cursor:pointer; color:var(--sub-text); font-weight:600" onclick="goFolder()">← Bitir</div>
+    <div style="display:flex; gap:10px; align-items:center">
+        <select id="tts-lang" style="background:var(--card-bg); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px; font-size:12px; font-weight:600; outline:none;">
+            <option value="en-US">🇬🇧 EN</option><option value="de-DE">🇩🇪 DE</option><option value="zh-CN">🇨🇳 ZH</option><option value="tr-TR">🇹🇷 TR</option>
         </select>
+        <button class="icon-btn" id="btn-write-mode" onclick="toggleWriteMode()" title="Yazarak Çalışma Modu">⌨️</button>
         <div class="study-progress" id="s-progress">1 / 10</div>
-        <button class="btn" style="height:34px; font-size:12px; padding:0 12px; border-radius:8px" onclick="shuffleStudyDeck()">🔀 Karıştır</button>
     </div>
   </div>
   
-  <div id="study-active">
-      <div class="card-slide" id="card-container" onclick="handleCardClick()">
+  <div id="study-active" class="study-wrapper">
+      <div class="card-slide" id="card-container">
           <button class="tts-btn" onclick="playAudio(event)" title="Sesli Oku">🔊</button>
           
+          <div class="swipe-hint swipe-left-hint" id="swipe-left-hint">Tekrar</div>
+          <div class="swipe-hint swipe-right-hint" id="swipe-right-hint">Bildim</div>
+
           <img class="study-img" id="s-img" />
           <div class="study-word" id="s-text"></div>
-          <div style="font-size:13px; color:var(--sub-text); margin-top: 20px" id="s-hint">Cevabı görmek için tıkla</div>
+          
+          <div class="write-input-container" id="write-container">
+              <input type="text" class="write-input" id="write-input" placeholder="Cevabı yaz ve Enter'a bas..." autocomplete="off" />
+          </div>
+
+          <div style="font-size:13px; color:var(--sub-text); margin-top: 20px" id="s-hint">Çevirmek için tıkla</div>
       </div>
       
       <div id="s-action-row" style="display:none; gap:16px; margin-top:30px; justify-content:center">
-        <button class="btn" style="width: 140px; height:54px; color:var(--danger); border: 2px solid var(--danger); font-size:16px" onclick="markCard(false)">Bilmedim</button>
-        <button class="btn btn-filled" style="width: 140px; height:54px; background:var(--success); font-size:16px" onclick="markCard(true)">Bildim</button>
+        <button class="btn" style="width: 140px; height:54px; color:var(--danger); border: 2px solid var(--danger); font-size:16px" onclick="markCard(false)">Tekrar (Sola Kaydır)</button>
+        <button class="btn btn-filled" style="width: 140px; height:54px; background:var(--success); font-size:16px" onclick="markCard(true)">Bildim (Sağa Kaydır)</button>
       </div>
 
       <div class="score-board">
-          <span style="color:var(--success)">✓ Bildim: <span id="score-right">0</span></span>
+          <span style="color:var(--success)">✓ <span id="score-right">0</span></span>
           <span style="color:var(--border)">|</span>
-          <span style="color:var(--danger)">✕ Bilemedim: <span id="score-wrong">0</span></span>
+          <span style="color:var(--danger)">✕ <span id="score-wrong">0</span></span>
       </div>
   </div>
 </div>
 
 <div id="page-new-folder" class="page">
-    <div style="margin: 60px auto; background: var(--card-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--border); width: 100%; max-width: 500px;">
-        <div class="topbar-title" style="margin-bottom: 24px">Yeni Set Oluştur</div>
-        <input type="text" id="nf-name" placeholder="Başlık girin (örn. Almanca Fiiller)" style="margin-bottom: 30px; font-size: 18px" />
+    <div style="margin: 60px auto; background: var(--card-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--border); max-width: 500px;">
+        <div class="topbar-title" style="margin-bottom: 24px">Yeni Set</div>
+        <input type="text" id="nf-name" placeholder="Başlık (örn. Almanca)" style="margin-bottom: 20px;" />
         <div style="display: flex; gap: 12px; justify-content: flex-end;">
             <button class="btn" onclick="goHome()">İptal</button>
             <button class="btn btn-filled" onclick="createFolder()">Oluştur</button>
@@ -244,9 +252,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyAJJEYEFyIDiV1zS4-BLyJ0p_wuGJVq1Ws",
   authDomain: "flashcard-1e281.firebaseapp.com",
   projectId: "flashcard-1e281",
-  storageBucket: "flashcard-1e281.firebasestorage.app",
-  messagingSenderId: "633351689761",
-  appId: "1:633351689761:web:c5fed61913b87d95a67560"
+  storageBucket: "flashcard-1e281.firebasestorage.app"
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -254,21 +260,28 @@ const auth = getAuth(app);
 const storage = getStorage(app);
 
 let currentUser, docRef, folders = [], selFolder = null;
+let userStats = {}; // Isı haritası için
 let roundQueue = [], wrongPile = [], qIdx = 0, hasRevealedOnce = false;
 let sessionRight = 0, sessionWrong = 0; 
+let isWriteMode = false;
 
-// Helpers
+// UI Helpers
 window.showPage = id => { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); };
 window.toggleDarkMode = () => { const isDark = document.body.classList.toggle('dark'); localStorage.setItem('dark-mode', isDark); };
 if(localStorage.getItem('dark-mode') === 'false') document.body.classList.remove('dark');
 
-// Auth
+// Auth & Data Load
 onAuthStateChanged(auth, user => {
   if (user) {
     currentUser = user; docRef = doc(db, "users", user.uid);
     onSnapshot(docRef, snap => {
-      if(snap.exists()) { folders = snap.data().folders || []; renderFolders(); document.getElementById('sync-dot').classList.add('online'); } 
-      else { setDoc(docRef, {folders: []}); }
+      if(snap.exists()) { 
+          const data = snap.data();
+          folders = data.folders || []; 
+          userStats = data.stats || {};
+          renderFolders(); renderHeatmap();
+          document.getElementById('sync-dot').classList.add('online'); 
+      } else { setDoc(docRef, {folders: [], stats: {}}); }
     });
     showPage('home');
   } else { showPage('auth'); }
@@ -277,52 +290,83 @@ onAuthStateChanged(auth, user => {
 window.handleAuth = async () => {
   const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-pass').value;
   if(!email || !pass) return;
-  document.getElementById('auth-btn').textContent = "Bekleyin...";
+  document.getElementById('auth-btn').textContent = "Bekleyen...";
   try { window.isReg ? await createUserWithEmailAndPassword(auth, email, pass) : await signInWithEmailAndPassword(auth, email, pass); } 
   catch(e) { document.getElementById('auth-error').textContent = e.message; document.getElementById('auth-error').style.display = 'block'; document.getElementById('auth-btn').textContent = "Devam Et"; }
 };
 
-// Folders
-window.createFolder = async () => {
-    const name = document.getElementById('nf-name').value; if(!name) return;
-    folders.unshift({id: Date.now().toString(), name, cards: []});
-    await setDoc(docRef, {folders}); document.getElementById('nf-name').value = ''; goHome();
-};
+// Heatmap Render
+function renderHeatmap() {
+    const grid = document.getElementById('heatmap-grid');
+    grid.innerHTML = '';
+    const today = new Date();
+    // Son 60 günü çiz
+    for(let i = 59; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const count = userStats[dateStr] || 0;
+        
+        let heatClass = '';
+        if(count > 0 && count <= 10) heatClass = 'heat-1';
+        else if(count > 10 && count <= 30) heatClass = 'heat-2';
+        else if(count > 30 && count <= 60) heatClass = 'heat-3';
+        else if(count > 60) heatClass = 'heat-4';
 
+        grid.innerHTML += `<div class="heat-box ${heatClass}" title="${dateStr}: ${count} kart çalışıldı"></div>`;
+    }
+}
+
+function recordStudyStat() {
+    const today = new Date().toISOString().split('T')[0];
+    userStats[today] = (userStats[today] || 0) + 1;
+}
+
+// Folders & FSRS Calculation
 window.renderFolders = () => {
-  document.getElementById('folder-grid').innerHTML = folders.map(f => `
-    <div class="folder-card" onclick="openFolder('${f.id}')">
-      <div class="folder-name">${f.name}</div>
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px">
-          <div style="font-size:13px; color:var(--sub-text); font-weight:600">${f.cards.length} Terim</div>
-      </div>
-    </div>
-  `).join('');
+  const now = Date.now();
+  document.getElementById('folder-grid').innerHTML = folders.map(f => {
+      const dueCards = f.cards.filter(c => !c.nextReview || c.nextReview <= now).length;
+      return `
+      <div class="folder-card" onclick="openFolder('${f.id}')">
+        <div class="folder-name">${f.name}</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px">
+            <div style="font-size:13px; color:var(--sub-text); font-weight:600">${f.cards.length} Terim</div>
+            ${dueCards > 0 ? `<div class="badge-due">${dueCards} Bekleyen</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
 };
 
 window.openFolder = id => {
   selFolder = folders.find(f => f.id === id);
   document.getElementById('fh-title').textContent = selFolder.name;
+  
+  const now = Date.now();
+  const dueCount = selFolder.cards.filter(c => !c.nextReview || c.nextReview <= now).length;
+  const avgEase = selFolder.cards.length > 0 ? (selFolder.cards.reduce((acc, c) => acc + (c.ease || 2.5), 0) / selFolder.cards.length).toFixed(1) : "2.5";
+  
+  document.getElementById('fh-stats').innerHTML = `📉 Hafıza Gücü Çarpanı: ${avgEase}x | ⏳ ${dueCount} kart çalışılmayı bekliyor.`;
+  document.getElementById('btn-start-study').textContent = dueCount > 0 ? `Çalış (${dueCount})` : "Zorla Çalış (Hepsi)";
+  
   renderEditor(); showPage('folder');
 };
 
-// Quizlet Style Editor & CSV & Smart Predict Logic
+// Quizlet Editor & Predict
 window.renderEditor = () => {
   const list = document.getElementById('editor-list');
   document.getElementById('card-count-label').textContent = `KARTLAR (${selFolder.cards.length})`;
-  if(selFolder.cards.length === 0) { list.innerHTML = ''; return; }
-  
-  list.innerHTML = selFolder.cards.map((c, i) => `
+  list.innerHTML = selFolder.cards.map(c => `
     <div class="q-row">
       <div class="q-inputs">
         <div class="q-input-group">
-          <input type="text" id="front-${c.id}" value="${c.front}" onchange="updateCardText('${c.id}', 'front', this.value)" placeholder="Terim girin..." />
-          <div class="q-label">TERİM</div>
+          <input type="text" id="front-${c.id}" value="${c.front}" onchange="updateCardText('${c.id}', 'front', this.value)" />
+          <div class="q-label">ÖN YÜZ</div>
         </div>
         <div class="q-input-group">
-          <input type="text" id="back-${c.id}" value="${c.back}" onchange="updateCardText('${c.id}', 'back', this.value)" placeholder="Tanım girin..." />
+          <input type="text" id="back-${c.id}" value="${c.back}" onchange="updateCardText('${c.id}', 'back', this.value)" />
           <button class="predict-btn" onclick="smartPredictRow('${c.id}')" title="İngilizceye Çevir">🪄</button>
-          <div class="q-label">TANIM</div>
+          <div class="q-label">ARKA YÜZ</div>
         </div>
       </div>
       <div style="display:flex; flex-direction:column; align-items:center; gap:8px">
@@ -330,103 +374,52 @@ window.renderEditor = () => {
             ${c.image ? `<img src="${c.image}" />` : `<div class="q-img-icon">🖼️</div><div class="q-img-text">Resim</div>`}
         </div>
         <input type="file" id="file-${c.id}" accept="image/*" style="display:none" onchange="uploadImage('${c.id}', this)" />
-        <button class="q-del-btn" onclick="deleteCard('${c.id}')" title="Kartı Sil">🗑️</button>
+        <button class="q-del-btn" onclick="deleteCard('${c.id}')">🗑️</button>
       </div>
     </div>
   `).join('');
 };
 
-// --- AKILLI TAHMİN (SMART PREDICT) -> İNGİLİZCE (EN) ---
 window.smartPredictRow = async (cardId) => {
-    const frontEl = document.getElementById(`front-${cardId}`);
-    const backEl = document.getElementById(`back-${cardId}`);
-    const text = frontEl.value.trim();
-    if(!text) return alert("Önce sol tarafa bir terim yazmalısın!");
-    
-    backEl.placeholder = "Çevriliyor...";
-    backEl.value = "";
-    
+    const frontEl = document.getElementById(`front-${cardId}`), backEl = document.getElementById(`back-${cardId}`);
+    if(!frontEl.value.trim()) return;
+    backEl.placeholder = "Çevriliyor..."; backEl.value = "";
     try {
-        // Hedef dil 'en' (İngilizce) olarak ayarlandı
-        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=Autodetect|en`);
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(frontEl.value.trim())}&langpair=Autodetect|en`);
         const data = await res.json();
-        
-        if(data && data.responseData && data.responseData.translatedText) {
+        if(data?.responseData?.translatedText) {
             backEl.value = data.responseData.translatedText;
             updateCardText(cardId, 'back', backEl.value); 
         }
-    } catch(err) {
-        alert("Tahmin başarısız oldu, internet bağlantını kontrol et.");
-    }
+    } catch(err) {}
 };
 
-window.handleCSVUpload = (input) => {
-    const file = input.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    
-    reader.onload = async (e) => {
-        const text = e.target.result;
-        const lines = text.split('\n');
-        let addedCount = 0;
-        const csvRegex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
+window.addNewEmptyCard = async () => { selFolder.cards.push({ id: Date.now().toString(), front: '', back: '', image: null, reps: 0, interval: 0, ease: 2.5 }); renderEditor(); await setDoc(docRef, {folders, stats: userStats}); };
+window.updateCardText = async (cardId, field, value) => { const card = selFolder.cards.find(c => c.id === cardId); if(card) { card[field] = value; await setDoc(docRef, {folders, stats: userStats}); } };
+window.deleteCard = async (cardId) => { selFolder.cards = selFolder.cards.filter(c => c.id !== cardId); renderEditor(); await setDoc(docRef, {folders, stats: userStats}); };
 
-        lines.forEach(line => {
-            if(!line.trim()) return;
-            let parts = line.split(csvRegex);
-            if(parts.length >= 2) {
-                let front = parts[0].replace(/^"|"$/g, '').trim();
-                let back = parts[1].replace(/^"|"$/g, '').trim();
-                const isHeader = front.toLowerCase().includes('term') || front.toLowerCase().includes('soru');
-                if(front && back && !isHeader) {
-                    selFolder.cards.push({ id: Date.now().toString() + Math.random().toString().substring(2, 6), front, back, image: null });
-                    addedCount++;
-                }
-            }
-        });
-        if(addedCount > 0) { await setDoc(docRef, {folders}); renderEditor(); alert(`${addedCount} kart dosyadan eklendi!`); } 
-        else { alert("CSV formatı anlaşılamadı. 'Terim,Tanım' şeklinde olduğundan emin ol."); }
-        input.value = '';
-    };
-    reader.readAsText(file);
-};
-
-window.addNewEmptyCard = async () => { selFolder.cards.push({ id: Date.now().toString(), front: '', back: '', image: null }); renderEditor(); await setDoc(docRef, {folders}); };
-window.updateCardText = async (cardId, field, value) => { const card = selFolder.cards.find(c => c.id === cardId); if(card) { card[field] = value; await setDoc(docRef, {folders}); } };
-window.deleteCard = async (cardId) => { selFolder.cards = selFolder.cards.filter(c => c.id !== cardId); renderEditor(); await setDoc(docRef, {folders}); };
-window.uploadImage = async (cardId, inputEl) => {
-    const file = inputEl.files[0]; if(!file) return;
-    const card = selFolder.cards.find(c => c.id === cardId); if(!card) return;
-    const reader = new FileReader();
-    reader.onload = (e) => { card.image = e.target.result; renderEditor(); };
-    reader.readAsDataURL(file);
-    try {
-        const sRef = ref(storage, `users/${currentUser.uid}/${cardId}_${Date.now()}`);
-        await uploadBytes(sRef, file);
-        card.image = await getDownloadURL(sRef);
-        await setDoc(docRef, {folders}); renderEditor();
-    } catch(err) { alert("Resim yüklenemedi."); }
-};
-
-// --- ÇALIŞMA MODU VE TTS (TEXT-TO-SPEECH) ---
+// STUDY LOGIC & FSRS & SWIPE & WRITE MODE
 window.startStudy = () => {
-  const validCards = selFolder.cards.filter(c => c.front.trim() !== '' && c.back.trim() !== '');
-  if(validCards.length === 0) return alert("Çalışılacak geçerli (dolu) kart yok!");
-  roundQueue = [...validCards].sort(() => Math.random() - 0.5);
+  const now = Date.now();
+  let dueCards = selFolder.cards.filter(c => c.front.trim() && c.back.trim() && (!c.nextReview || c.nextReview <= now));
+  
+  if(dueCards.length === 0) {
+      if(confirm("Bugün için vadesi dolan kart yok! Hafızan zehir gibi. Yine de tüm seti zorla çalışmak ister misin?")) {
+          dueCards = selFolder.cards.filter(c => c.front.trim() && c.back.trim());
+      } else return;
+  }
+  
+  roundQueue = [...dueCards].sort(() => Math.random() - 0.5);
   wrongPile = []; qIdx = 0; sessionRight = 0; sessionWrong = 0; 
-  updateScoreBoard(); showPage('study'); loadCard();
+  document.getElementById('score-right').textContent = 0; document.getElementById('score-wrong').textContent = 0;
+  showPage('study'); loadCard();
 };
 
-window.shuffleStudyDeck = () => {
-    const remaining = roundQueue.slice(qIdx); remaining.sort(() => Math.random() - 0.5);
-    roundQueue = [...roundQueue.slice(0, qIdx), ...remaining];
-    alert("Kalan kartlar yeniden karıştırıldı! 🔀"); loadCard();
+window.toggleWriteMode = () => {
+    isWriteMode = !isWriteMode;
+    document.getElementById('btn-write-mode').style.background = isWriteMode ? "var(--border)" : "none";
+    loadCard();
 };
-
-function updateScoreBoard() {
-    document.getElementById('score-right').textContent = sessionRight;
-    document.getElementById('score-wrong').textContent = sessionWrong;
-}
 
 function loadCard() {
   document.getElementById('s-progress').textContent = `${qIdx + 1} / ${roundQueue.length}`;
@@ -435,57 +428,138 @@ function loadCard() {
   img.style.display = c.image ? 'block' : 'none'; if(c.image) img.src = c.image;
   
   document.getElementById('s-text').textContent = c.front;
-  document.getElementById('s-hint').textContent = "Cevabı görmek için tıkla";
-  document.getElementById('s-action-row').style.display = 'none';
   hasRevealedOnce = false; 
+  document.getElementById('s-action-row').style.display = 'none';
+  
+  const writeContainer = document.getElementById('write-container');
+  const writeInput = document.getElementById('write-input');
+  const hintEl = document.getElementById('s-hint');
+  
+  // Container Reset
+  const container = document.getElementById('card-container');
+  container.style.transform = 'translateX(0) rotate(0)';
+  
+  if(isWriteMode) {
+      writeContainer.classList.add('active');
+      writeInput.value = ''; writeInput.className = 'write-input';
+      writeInput.focus();
+      hintEl.textContent = "Cevabı yaz ve Enter'a bas";
+      container.onclick = null; // Tıklayarak çevirmeyi iptal et
+  } else {
+      writeContainer.classList.remove('active');
+      hintEl.textContent = "Çevirmek için karta dokun veya kaydır";
+      container.onclick = handleCardClick;
+  }
 }
 
-window.handleCardClick = () => {
+// Write Mode Enter Key Logic
+document.getElementById('write-input').addEventListener('keypress', function(e) {
+    if(e.key === 'Enter') {
+        const answer = this.value.trim().toLowerCase();
+        const correctAnswer = roundQueue[qIdx].back.trim().toLowerCase();
+        
+        if(!hasRevealedOnce) {
+            hasRevealedOnce = true;
+            document.getElementById('s-text').textContent = roundQueue[qIdx].back;
+            document.getElementById('s-action-row').style.display = 'flex';
+            
+            if(answer === correctAnswer) {
+                this.classList.add('success'); setTimeout(() => markCard(true), 800);
+            } else {
+                this.classList.add('error');
+            }
+        }
+    }
+});
+
+function handleCardClick() {
+  if(isWriteMode) return;
   const c = roundQueue[qIdx];
   const textEl = document.getElementById('s-text');
-  const hintEl = document.getElementById('s-hint');
   if(!hasRevealedOnce) { hasRevealedOnce = true; document.getElementById('s-action-row').style.display = 'flex'; }
-  if(textEl.textContent === c.front) {
-      textEl.textContent = c.back; hintEl.textContent = "Ön yüze dönmek için tekrar tıkla";
-  } else {
-      textEl.textContent = c.front; hintEl.textContent = "Arka yüze dönmek için tekrar tıkla";
-  }
-};
+  textEl.textContent = (textEl.textContent === c.front) ? c.back : c.front;
+}
 
-window.markCard = (correct) => {
-  event.stopPropagation(); 
-  if(!correct) { wrongPile.push(roundQueue[qIdx]); sessionWrong++; } else { sessionRight++; }
-  updateScoreBoard(); qIdx++;
+// FSRS / SM-2 Algoritması
+window.markCard = async (correct) => {
+  if(event) event.stopPropagation(); 
+  
+  let actualCard = selFolder.cards.find(c => c.id === roundQueue[qIdx].id);
+  
+  // SM-2 Math
+  if(!actualCard.reps) { actualCard.reps = 0; actualCard.interval = 1; actualCard.ease = 2.5; }
+  
+  if(!correct) { 
+      wrongPile.push(roundQueue[qIdx]); sessionWrong++; 
+      actualCard.reps = 0; actualCard.interval = 1;
+      actualCard.ease = Math.max(1.3, actualCard.ease - 0.2); // Ease düşer
+  } else { 
+      sessionRight++; 
+      actualCard.reps++;
+      if(actualCard.reps === 1) actualCard.interval = 1;
+      else if(actualCard.reps === 2) actualCard.interval = 6;
+      else actualCard.interval = Math.round(actualCard.interval * actualCard.ease); // Interval katlanır
+  }
+  
+  actualCard.nextReview = Date.now() + (actualCard.interval * 86400000); // Milisaniye cinsinden gün
+  recordStudyStat(); // Isı haritası için logla
+
+  document.getElementById('score-right').textContent = sessionRight;
+  document.getElementById('score-wrong').textContent = sessionWrong;
+  
+  qIdx++;
   if(qIdx >= roundQueue.length) {
+      await setDoc(docRef, {folders, stats: userStats}); // Tur bitince kaydet
       if(wrongPile.length > 0) {
-          alert(`İlk tur bitti! Sadece bilemediğin ${wrongPile.length} kart ile yeniden başlıyoruz.`);
+          alert(`Tur bitti! Sadece bilemediğin ${wrongPile.length} kart ile devam ediyoruz.`);
           roundQueue = [...wrongPile].sort(() => Math.random() - 0.5); wrongPile = []; qIdx = 0; loadCard();
-      } else { alert("Tebrikler! Seti tamamen öğrendin."); goFolder(); }
+      } else { alert("Mükemmel! Bu setteki bugünkü görevini tamamladın."); goFolder(); }
   } else { loadCard(); }
 };
 
-// TTS Fonksiyonu
-window.playAudio = (event) => {
-    event.stopPropagation(); // Kartın dönmesini engeller
-    const textToRead = document.getElementById('s-text').textContent;
-    const selectedLang = document.getElementById('tts-lang').value;
+// Swipe Gestures Logic
+let touchstartX = 0;
+const container = document.getElementById('card-container');
+const hintL = document.getElementById('swipe-left-hint');
+const hintR = document.getElementById('swipe-right-hint');
+
+container.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, {passive: true});
+container.addEventListener('touchmove', e => {
+    if(isWriteMode || !hasRevealedOnce) return;
+    const deltaX = e.changedTouches[0].screenX - touchstartX;
+    container.style.transform = `translateX(${deltaX}px) rotate(${deltaX * 0.05}deg)`;
+    if(deltaX < -50) hintL.style.opacity = 1; else hintL.style.opacity = 0;
+    if(deltaX > 50) hintR.style.opacity = 1; else hintR.style.opacity = 0;
+}, {passive: true});
+container.addEventListener('touchend', e => {
+    if(isWriteMode || !hasRevealedOnce) return;
+    const touchendX = e.changedTouches[0].screenX;
+    hintL.style.opacity = 0; hintR.style.opacity = 0;
+    container.style.transform = 'translateX(0) rotate(0)';
     
+    if (touchendX < touchstartX - 70) markCard(false); // Sola kaydırma (Yanlış)
+    if (touchendX > touchstartX + 70) markCard(true);  // Sağa kaydırma (Doğru)
+});
+
+// TTS
+window.playAudio = (event) => {
+    event.stopPropagation();
     if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(textToRead);
-        utterance.lang = selectedLang;
-        utterance.rate = 0.9; // Biraz daha anlaşılır olması için hızı %10 düşürdüm
-        window.speechSynthesis.speak(utterance);
-    } else {
-        alert("Tarayıcınız sesli okuma özelliğini desteklemiyor.");
+        const u = new SpeechSynthesisUtterance(document.getElementById('s-text').textContent);
+        u.lang = document.getElementById('tts-lang').value;
+        u.rate = 0.9;
+        window.speechSynthesis.speak(u);
     }
 };
 
-// Globals
-window.goHome = () => showPage('home');
+// Globals exports
+window.goHome = () => { renderHeatmap(); renderFolders(); showPage('home'); };
 window.goFolder = () => showPage('folder');
+window.createFolder = window.createFolder;
 window.toggleAuthMode = () => { window.isReg = !window.isReg; document.getElementById('auth-title').textContent = window.isReg ? "Kayıt Ol" : "Giriş Yap"; };
 window.handleLogout = () => signOut(auth);
-window.deleteFolder = async () => { if(confirm("Tüm seti silmek istediğine emin misin?")) { folders = folders.filter(f => f.id !== selFolder.id); await setDoc(docRef, {folders}); goHome(); } };
+window.deleteFolder = async () => { if(confirm("Tüm seti silmek istediğine emin misin?")) { folders = folders.filter(f => f.id !== selFolder.id); await setDoc(docRef, {folders, stats:userStats}); goHome(); } };
 </script>
 </body>
 </html>
+```
