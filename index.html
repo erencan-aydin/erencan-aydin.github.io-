@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Öğrenme Merkezi | Pro Mode v3</title>
+<title>Öğrenme Merkezi | Pro Mode v4</title>
 <style>
 :root {
   --bg: #f6f7fb; --text: #0a092d; --card-bg: #ffffff; --border: #e1e5ee;
@@ -40,7 +40,7 @@ body{
 .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
 .icon-btn { background: none; border: none; cursor: pointer; font-size: 20px; padding: 8px; border-radius: 50%; color: var(--text); transition: background 0.2s; }
 .icon-btn:hover { background: var(--border); }
-.sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-left:8px;vertical-align:middle}
+.sync-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin-left:8px;vertical-align:middle; transition: background 0.3s, box-shadow 0.3s;}
 .sync-dot.online{background:var(--success); box-shadow: 0 0 8px var(--success)}
 
 /* Isı Haritası */
@@ -56,7 +56,7 @@ body{
 input, textarea, select { width:100%; border-radius:8px; border:1px solid var(--border); background:var(--input-bg); color:var(--text); outline:none; padding: 12px; font-family: inherit; }
 input:focus, textarea:focus { border-color: var(--accent); }
 
-/* Folder Grid (Hata Düzeltildi) */
+/* Folder Grid */
 .folder-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 .folder-card{ background:var(--card-bg);border:1px solid var(--border);border-radius:12px; padding:1.5rem; cursor:pointer; min-height:110px; display: flex; flex-direction: column; justify-content: space-between; position: relative; z-index: 10; transition: transform 0.2s;}
 .folder-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.05); border-color: var(--accent); }
@@ -178,7 +178,7 @@ input:focus, textarea:focus { border-color: var(--accent); }
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
@@ -190,13 +190,16 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+// Çevrimdışı senkronizasyon (Offline Persistence) aktif ediliyor!
+enableIndexedDbPersistence(db).catch(() => {}); 
+
 const auth = getAuth(app);
 const storage = getStorage(app);
 
 let currentUser, docRef, folders = [], userStats = {}, roundQueue = [], qIdx = 0, isWriteMode = false;
 let sessionRight = 0, sessionWrong = 0, hasRevealedOnce = false, isReg = false, selFolder = null;
 
-// Ekranı gizleyen kilidi aç
 const hideLoader = () => { document.getElementById('app-loading').style.display = 'none'; };
 
 onAuthStateChanged(auth, user => {
@@ -204,17 +207,23 @@ onAuthStateChanged(auth, user => {
     currentUser = user; docRef = doc(db, "users", user.uid);
     onSnapshot(docRef, snap => {
       hideLoader();
+      
+      // Senkronizasyon ışığı yeşile dönüyor!
+      const syncDot = document.getElementById('sync-dot');
+      if (syncDot) syncDot.classList.add('online');
+
       if(snap.exists()) { const data = snap.data(); folders = data.folders || []; userStats = data.stats || {}; appRenderFolders(); renderHeatmap(); } 
       else { setDoc(docRef, {folders: [], stats: {}}); }
+      
       if(!document.querySelector('.page.active') || document.getElementById('page-auth').classList.contains('active')) window.appShowPage('home');
     });
   } else { hideLoader(); window.appShowPage('auth'); }
 });
 
-// -- GÜVENLİ İSİMLENDİRME (Namespace Koruması) --
+// Sayfa Navigasyon
 window.appShowPage = id => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-new-folder').style.display = 'none'; // Modal reset
+    document.getElementById('page-new-folder').style.display = 'none';
     document.getElementById('dict-modal').style.display = 'none';
     const target = document.getElementById('page-' + id);
     if(target) target.classList.add('active');
@@ -236,7 +245,7 @@ if(localStorage.getItem('dark-mode') === 'true') document.body.classList.add('da
 window.appGoHome = () => window.appShowPage('home');
 window.appGoFolder = () => window.appShowPage('folder');
 
-// Folder İşlemleri
+// Klasör Operasyonları
 window.appCreateFolder = async () => {
     const n = document.getElementById('nf-name').value; if(!n) return;
     folders.unshift({id: "set_" + Date.now(), name: n, cards: []});
@@ -291,7 +300,7 @@ window.appUpdateCard = async (id, f, v) => { const c = selFolder.cards.find(x =>
 window.appDeleteCard = async (id) => { if(confirm("Kart silinsin mi?")) { selFolder.cards = selFolder.cards.filter(x => x.id !== id); appRenderEditor(); await setDoc(docRef, {folders, stats: userStats}); } };
 window.appAddNewEmptyCard = async () => { selFolder.cards.push({ id: "c_" + Date.now(), front: '', back: '', reps: 0, interval: 0, ease: 2.5 }); appRenderEditor(); await setDoc(docRef, {folders, stats: userStats}); };
 
-// -- YAPAY ZEKA GÖRSEL ASİSTANI (POLLINATIONS) --
+// Yapay Zeka Çizim
 window.appGenerateAIImage = async (id) => {
     const input = document.getElementById(`front-${id}`);
     const word = input ? input.value.trim() : "";
@@ -299,12 +308,9 @@ window.appGenerateAIImage = async (id) => {
     const c = selFolder.cards.find(x => x.id === id);
     if(!c) return;
     
-    // Yükleniyor efekti ver
-    const oldImg = c.image;
-    c.image = "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif"; // Basit spinner
+    c.image = "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif";
     appRenderEditor();
     
-    // Prompt'u eğitim amaçlı netleştir
     const prompt = encodeURIComponent(word + ", single object, isolated on solid white background, high quality, clear, educational illustration");
     const aiUrl = `https://image.pollinations.ai/prompt/${prompt}?width=400&height=400&nologo=true&seed=${Math.random()}`;
     
@@ -340,7 +346,7 @@ window.appHandleCSVUpload = (input) => {
     reader.readAsText(file);
 };
 
-// -- SÖZLÜK SİSTEMİ --
+// Sözlük Asistanı
 window.appOpenDictionary = (id) => {
     document.getElementById('dict-card-id').value = id;
     document.getElementById('dict-word').value = document.getElementById(`front-${id}`).value;
@@ -361,7 +367,7 @@ window.appApplyDictionaryData = () => {
     document.getElementById('dict-modal').style.display = 'none';
 };
 
-// -- ÇALIŞMA SİSTEMİ --
+// Çalışma ve FSRS Modülü
 window.appStartStudy = () => {
   const now = Date.now();
   let due = selFolder.cards.filter(c => c.front && c.back && (!c.nextReview || c.nextReview <= now));
