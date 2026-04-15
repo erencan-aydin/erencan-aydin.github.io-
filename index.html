@@ -19,8 +19,7 @@ body.dark {
 body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   background:var(--bg); color:var(--text); font-size:14px; line-height:1.5;
-  transition: background 0.3s, color 0.3s;
-  -webkit-font-smoothing: antialiased;
+  transition: background 0.3s, color 0.3s; -webkit-font-smoothing: antialiased;
 }
 .app{max-width:800px;margin:0 auto;min-height:100vh;padding:1.5rem}
 .page{display:none; animation: fadeIn 0.2s ease-out;}
@@ -74,8 +73,10 @@ input:focus { border-bottom-color: var(--accent); }
   border: 1px solid var(--border); position: relative;
 }
 .q-inputs { flex: 1; display: flex; gap: 20px; }
-.q-input-group { flex: 1; display: flex; flex-direction: column; }
+.q-input-group { flex: 1; display: flex; flex-direction: column; position: relative; }
 .q-label { font-size: 11px; font-weight: 600; color: var(--sub-text); text-transform: uppercase; margin-top: 8px; letter-spacing: 0.5px;}
+.predict-btn { position: absolute; right: 10px; top: 10px; background: none; border: none; cursor: pointer; font-size: 16px; opacity: 0.7; transition: opacity 0.2s; }
+.predict-btn:hover { opacity: 1; }
 
 .q-img-box {
   width: 80px; height: 80px; border: 2px dashed var(--border); border-radius: 8px;
@@ -92,17 +93,18 @@ input:focus { border-bottom-color: var(--accent); }
 /* Study Mode */
 .card-slide{
   background:var(--card-bg);border:1px solid var(--border);border-radius:16px;
-  padding:2.5rem 1.5rem;text-align:center;min-height:450px;
+  padding:2.5rem 1.5rem;text-align:center;min-height:400px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   transition: transform 0.3s ease; backface-visibility:hidden;width:100%;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08); cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08); cursor: pointer; position: relative;
 }
 .study-img{
-  max-width:100%; max-height:280px; border-radius:12px;
+  max-width:100%; max-height:240px; border-radius:12px;
   margin-bottom:24px; object-fit:contain; display:none;
 }
 .study-word{font-size:36px;font-weight:700;margin-bottom:12px; word-break: break-word;}
-.study-progress { font-size: 14px; font-weight: 600; color: var(--sub-text); margin-bottom: 1rem; text-align: center; letter-spacing: 1px;}
+.study-progress { font-size: 14px; font-weight: 600; color: var(--sub-text); letter-spacing: 1px;}
+.score-board { display:flex; gap:16px; font-size:14px; font-weight:600; background:var(--card-bg); padding:12px 20px; border-radius:12px; border:1px solid var(--border); margin-top: 20px; justify-content:center}
 
 @media (max-width: 600px) {
   .folder-grid { grid-template-columns: 1fr; }
@@ -173,8 +175,13 @@ input:focus { border-bottom-color: var(--accent); }
 </div>
 
 <div id="page-study" class="page">
-  <div style="cursor:pointer; color:var(--sub-text); margin-bottom:10px; font-weight:600" onclick="goFolder()">← Çalışmayı Bitir</div>
-  <div class="study-progress" id="s-progress">1 / 10</div>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+    <div style="cursor:pointer; color:var(--sub-text); font-weight:600" onclick="goFolder()">← Çalışmayı Bitir</div>
+    <div style="display:flex; gap:12px; align-items:center">
+        <div class="study-progress" id="s-progress">1 / 10</div>
+        <button class="btn" style="height:32px; font-size:12px; padding:0 12px; border-radius:6px" onclick="shuffleStudyDeck()">🔀 Karıştır</button>
+    </div>
+  </div>
   
   <div id="study-active">
       <div class="card-slide" id="card-container" onclick="handleCardClick()">
@@ -182,9 +189,16 @@ input:focus { border-bottom-color: var(--accent); }
           <div class="study-word" id="s-text"></div>
           <div style="font-size:13px; color:var(--sub-text); margin-top: 20px" id="s-hint">Cevabı görmek için tıkla</div>
       </div>
+      
       <div id="s-action-row" style="display:none; gap:16px; margin-top:30px; justify-content:center">
         <button class="btn" style="width: 140px; height:54px; color:var(--danger); border: 2px solid var(--danger); font-size:16px" onclick="markCard(false)">Bilmedim</button>
         <button class="btn btn-filled" style="width: 140px; height:54px; background:var(--success); font-size:16px" onclick="markCard(true)">Bildim</button>
+      </div>
+
+      <div class="score-board">
+          <span style="color:var(--success)">✓ Bildim: <span id="score-right">0</span></span>
+          <span style="color:var(--border)">|</span>
+          <span style="color:var(--danger)">✕ Bilemedim: <span id="score-wrong">0</span></span>
       </div>
   </div>
 </div>
@@ -192,7 +206,7 @@ input:focus { border-bottom-color: var(--accent); }
 <div id="page-new-folder" class="page">
     <div style="margin: 60px auto; background: var(--card-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--border); width: 100%; max-width: 500px;">
         <div class="topbar-title" style="margin-bottom: 24px">Yeni Set Oluştur</div>
-        <input type="text" id="nf-name" placeholder="Başlık girin (örn. Pathways)" style="margin-bottom: 30px; font-size: 18px" />
+        <input type="text" id="nf-name" placeholder="Başlık girin (örn. Almanca Terimler)" style="margin-bottom: 30px; font-size: 18px" />
         <div style="display: flex; gap: 12px; justify-content: flex-end;">
             <button class="btn" onclick="goHome()">İptal</button>
             <button class="btn btn-filled" onclick="createFolder()">Oluştur</button>
@@ -222,7 +236,8 @@ const auth = getAuth(app);
 const storage = getStorage(app);
 
 let currentUser, docRef, folders = [], selFolder = null;
-let roundQueue = [], wrongPile = [], qIdx = 0, revealed = false;
+let roundQueue = [], wrongPile = [], qIdx = 0, hasRevealedOnce = false;
+let sessionRight = 0, sessionWrong = 0; // Skor takibi için
 
 // Helpers
 window.showPage = id => { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); };
@@ -273,7 +288,7 @@ window.openFolder = id => {
   renderEditor(); showPage('folder');
 };
 
-// Quizlet Style Editor & CSV Logic
+// Quizlet Style Editor & CSV & Smart Predict Logic
 window.renderEditor = () => {
   const list = document.getElementById('editor-list');
   document.getElementById('card-count-label').textContent = `KARTLAR (${selFolder.cards.length})`;
@@ -283,11 +298,12 @@ window.renderEditor = () => {
     <div class="q-row">
       <div class="q-inputs">
         <div class="q-input-group">
-          <input type="text" value="${c.front}" onchange="updateCardText('${c.id}', 'front', this.value)" placeholder="Terim girin..." />
+          <input type="text" id="front-${c.id}" value="${c.front}" onchange="updateCardText('${c.id}', 'front', this.value)" placeholder="Terim girin..." />
           <div class="q-label">TERİM</div>
         </div>
         <div class="q-input-group">
-          <input type="text" value="${c.back}" onchange="updateCardText('${c.id}', 'back', this.value)" placeholder="Tanım girin..." />
+          <input type="text" id="back-${c.id}" value="${c.back}" onchange="updateCardText('${c.id}', 'back', this.value)" placeholder="Tanım girin..." />
+          <button class="predict-btn" onclick="smartPredictRow('${c.id}')" title="Yapay Zeka Çeviri Tahmini">🪄</button>
           <div class="q-label">TANIM</div>
         </div>
       </div>
@@ -302,6 +318,30 @@ window.renderEditor = () => {
   `).join('');
 };
 
+// --- AKILLI TAHMİN (SMART PREDICT) ---
+window.smartPredictRow = async (cardId) => {
+    const frontEl = document.getElementById(`front-${cardId}`);
+    const backEl = document.getElementById(`back-${cardId}`);
+    const text = frontEl.value.trim();
+    if(!text) return alert("Önce sol tarafa bir terim yazmalısın!");
+    
+    backEl.placeholder = "Çevriliyor...";
+    backEl.value = "";
+    
+    try {
+        // Ücretsiz MyMemory API. Dili otomatik algılayıp (Autodetect) Türkçe'ye (tr) çevirir.
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=Autodetect|tr`);
+        const data = await res.json();
+        
+        if(data && data.responseData && data.responseData.translatedText) {
+            backEl.value = data.responseData.translatedText;
+            updateCardText(cardId, 'back', backEl.value); // Firebase'e anında kaydet
+        }
+    } catch(err) {
+        alert("Tahmin başarısız oldu, internet bağlantını kontrol et.");
+    }
+};
+
 window.handleCSVUpload = (input) => {
     const file = input.files[0];
     if(!file) return;
@@ -312,7 +352,6 @@ window.handleCSVUpload = (input) => {
         const lines = text.split('\n');
         let addedCount = 0;
         
-        // CSV parsing regex: virgüle göre böler ama tırnak içindeki virgülleri es geçer
         const csvRegex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
 
         lines.forEach(line => {
@@ -320,11 +359,8 @@ window.handleCSVUpload = (input) => {
             let parts = line.split(csvRegex);
             
             if(parts.length >= 2) {
-                // Tırnak işaretlerini temizle
                 let front = parts[0].replace(/^"|"$/g, '').trim();
                 let back = parts[1].replace(/^"|"$/g, '').trim();
-                
-                // Başlık satırlarını es geç (Term, Definition vb.)
                 const isHeader = front.toLowerCase().includes('term') || front.toLowerCase().includes('soru');
                 
                 if(front && back && !isHeader) {
@@ -340,11 +376,11 @@ window.handleCSVUpload = (input) => {
         if(addedCount > 0) {
             await setDoc(docRef, {folders});
             renderEditor();
-            alert(`${addedCount} kart NotebookLM dosyasından başarıyla eklendi!`);
+            alert(`${addedCount} kart dosyadan başarıyla eklendi!`);
         } else {
             alert("CSV formatı anlaşılamadı. 'Terim,Tanım' şeklinde olduğundan emin ol.");
         }
-        input.value = ''; // Inputu sıfırla ki aynı dosyayı tekrar seçebilsin
+        input.value = '';
     };
     reader.readAsText(file);
 };
@@ -382,15 +418,31 @@ window.uploadImage = async (cardId, inputEl) => {
     } catch(err) { alert("Resim yüklenemedi."); }
 };
 
-// Akıllı Çalışma Mantığı (Round System)
+// Akıllı Çalışma Mantığı & Karıştırma & Skor Takibi
 window.startStudy = () => {
   const validCards = selFolder.cards.filter(c => c.front.trim() !== '' && c.back.trim() !== '');
   if(validCards.length === 0) return alert("Çalışılacak geçerli (dolu) kart yok!");
   
   roundQueue = [...validCards].sort(() => Math.random() - 0.5);
   wrongPile = []; qIdx = 0;
+  sessionRight = 0; sessionWrong = 0; // Skorları sıfırla
+  updateScoreBoard();
+  
   showPage('study'); loadCard();
 };
+
+window.shuffleStudyDeck = () => {
+    const remaining = roundQueue.slice(qIdx);
+    remaining.sort(() => Math.random() - 0.5);
+    roundQueue = [...roundQueue.slice(0, qIdx), ...remaining];
+    alert("Kalan kartlar yeniden karıştırıldı! 🔀");
+    loadCard();
+};
+
+function updateScoreBoard() {
+    document.getElementById('score-right').textContent = sessionRight;
+    document.getElementById('score-wrong').textContent = sessionWrong;
+}
 
 function loadCard() {
   document.getElementById('s-progress').textContent = `${qIdx + 1} / ${roundQueue.length}`;
@@ -403,26 +455,46 @@ function loadCard() {
   document.getElementById('s-text').textContent = c.front;
   document.getElementById('s-hint').textContent = "Cevabı görmek için tıkla";
   document.getElementById('s-action-row').style.display = 'none';
-  revealed = false;
+  hasRevealedOnce = false; // Yeni karta geçince buton saklama durumunu sıfırla
 }
 
+// Çift Yönlü Çevirme Mantığı (Toggle)
 window.handleCardClick = () => {
-  if(!revealed) {
-    document.getElementById('s-text').textContent = roundQueue[qIdx].back;
-    document.getElementById('s-hint').textContent = " ";
-    document.getElementById('s-action-row').style.display = 'flex';
-    revealed = true;
+  const c = roundQueue[qIdx];
+  const textEl = document.getElementById('s-text');
+  const hintEl = document.getElementById('s-hint');
+
+  // Arka yüzü İLK defa gördüğünde butonlar çıksın ve bir daha kaybolmasın
+  if(!hasRevealedOnce) {
+      hasRevealedOnce = true;
+      document.getElementById('s-action-row').style.display = 'flex';
+  }
+
+  // Eğer ekranda ön yüz varsa arkayı göster, arka varsa önü göster.
+  if(textEl.textContent === c.front) {
+      textEl.textContent = c.back;
+      hintEl.textContent = "Ön yüze dönmek için tekrar tıkla";
+  } else {
+      textEl.textContent = c.front;
+      hintEl.textContent = "Arka yüze dönmek için tekrar tıkla";
   }
 };
 
 window.markCard = (correct) => {
-  event.stopPropagation();
-  if(!correct) wrongPile.push(roundQueue[qIdx]);
+  event.stopPropagation(); // Butona tıklarken kartın arkaya dönmesini engelle
+  
+  if(!correct) {
+      wrongPile.push(roundQueue[qIdx]);
+      sessionWrong++;
+  } else {
+      sessionRight++;
+  }
+  updateScoreBoard();
   
   qIdx++;
   if(qIdx >= roundQueue.length) {
       if(wrongPile.length > 0) {
-          alert(`İlk tur bitti! Şimdi sadece bilemediğin ${wrongPile.length} kart ile devam ediyorsun.`);
+          alert(`İlk tur bitti! Sadece bilemediğin ${wrongPile.length} kart ile yeniden başlıyoruz.`);
           roundQueue = [...wrongPile].sort(() => Math.random() - 0.5);
           wrongPile = []; qIdx = 0; loadCard();
       } else {
