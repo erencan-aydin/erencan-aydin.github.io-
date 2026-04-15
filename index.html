@@ -106,6 +106,16 @@ input:focus { border-bottom-color: var(--accent); }
 .study-progress { font-size: 14px; font-weight: 600; color: var(--sub-text); letter-spacing: 1px;}
 .score-board { display:flex; gap:16px; font-size:14px; font-weight:600; background:var(--card-bg); padding:12px 20px; border-radius:12px; border:1px solid var(--border); margin-top: 20px; justify-content:center}
 
+/* TTS Button */
+.tts-btn {
+  position: absolute; top: 20px; right: 20px; background: var(--input-bg); 
+  border: 1px solid var(--border); border-radius: 50%; width: 44px; height: 44px; 
+  font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; 
+  transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.05); color: var(--text);
+}
+.tts-btn:hover { background: var(--border); transform: scale(1.05); }
+.lang-select { background:var(--card-bg); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:13px; font-weight:600; outline:none; cursor:pointer; }
+
 @media (max-width: 600px) {
   .folder-grid { grid-template-columns: 1fr; }
   .q-row { flex-direction: column; gap: 10px; }
@@ -178,13 +188,21 @@ input:focus { border-bottom-color: var(--accent); }
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
     <div style="cursor:pointer; color:var(--sub-text); font-weight:600" onclick="goFolder()">← Çalışmayı Bitir</div>
     <div style="display:flex; gap:12px; align-items:center">
+        <select id="tts-lang" class="lang-select">
+            <option value="en-US" selected>🇬🇧 EN</option>
+            <option value="de-DE">🇩🇪 DE</option>
+            <option value="zh-CN">🇨🇳 ZH</option>
+            <option value="tr-TR">🇹🇷 TR</option>
+        </select>
         <div class="study-progress" id="s-progress">1 / 10</div>
-        <button class="btn" style="height:32px; font-size:12px; padding:0 12px; border-radius:6px" onclick="shuffleStudyDeck()">🔀 Karıştır</button>
+        <button class="btn" style="height:34px; font-size:12px; padding:0 12px; border-radius:8px" onclick="shuffleStudyDeck()">🔀 Karıştır</button>
     </div>
   </div>
   
   <div id="study-active">
       <div class="card-slide" id="card-container" onclick="handleCardClick()">
+          <button class="tts-btn" onclick="playAudio(event)" title="Sesli Oku">🔊</button>
+          
           <img class="study-img" id="s-img" />
           <div class="study-word" id="s-text"></div>
           <div style="font-size:13px; color:var(--sub-text); margin-top: 20px" id="s-hint">Cevabı görmek için tıkla</div>
@@ -206,7 +224,7 @@ input:focus { border-bottom-color: var(--accent); }
 <div id="page-new-folder" class="page">
     <div style="margin: 60px auto; background: var(--card-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--border); width: 100%; max-width: 500px;">
         <div class="topbar-title" style="margin-bottom: 24px">Yeni Set Oluştur</div>
-        <input type="text" id="nf-name" placeholder="Başlık girin (örn. Almanca Terimler)" style="margin-bottom: 30px; font-size: 18px" />
+        <input type="text" id="nf-name" placeholder="Başlık girin (örn. Almanca Fiiller)" style="margin-bottom: 30px; font-size: 18px" />
         <div style="display: flex; gap: 12px; justify-content: flex-end;">
             <button class="btn" onclick="goHome()">İptal</button>
             <button class="btn btn-filled" onclick="createFolder()">Oluştur</button>
@@ -237,7 +255,7 @@ const storage = getStorage(app);
 
 let currentUser, docRef, folders = [], selFolder = null;
 let roundQueue = [], wrongPile = [], qIdx = 0, hasRevealedOnce = false;
-let sessionRight = 0, sessionWrong = 0; // Skor takibi için
+let sessionRight = 0, sessionWrong = 0; 
 
 // Helpers
 window.showPage = id => { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); };
@@ -303,7 +321,7 @@ window.renderEditor = () => {
         </div>
         <div class="q-input-group">
           <input type="text" id="back-${c.id}" value="${c.back}" onchange="updateCardText('${c.id}', 'back', this.value)" placeholder="Tanım girin..." />
-          <button class="predict-btn" onclick="smartPredictRow('${c.id}')" title="Yapay Zeka Çeviri Tahmini">🪄</button>
+          <button class="predict-btn" onclick="smartPredictRow('${c.id}')" title="İngilizceye Çevir">🪄</button>
           <div class="q-label">TANIM</div>
         </div>
       </div>
@@ -318,7 +336,7 @@ window.renderEditor = () => {
   `).join('');
 };
 
-// --- AKILLI TAHMİN (SMART PREDICT) ---
+// --- AKILLI TAHMİN (SMART PREDICT) -> İNGİLİZCE (EN) ---
 window.smartPredictRow = async (cardId) => {
     const frontEl = document.getElementById(`front-${cardId}`);
     const backEl = document.getElementById(`back-${cardId}`);
@@ -329,13 +347,13 @@ window.smartPredictRow = async (cardId) => {
     backEl.value = "";
     
     try {
-        // Ücretsiz MyMemory API. Dili otomatik algılayıp (Autodetect) Türkçe'ye (tr) çevirir.
-        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=Autodetect|tr`);
+        // Hedef dil 'en' (İngilizce) olarak ayarlandı
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=Autodetect|en`);
         const data = await res.json();
         
         if(data && data.responseData && data.responseData.translatedText) {
             backEl.value = data.responseData.translatedText;
-            updateCardText(cardId, 'back', backEl.value); // Firebase'e anında kaydet
+            updateCardText(cardId, 'back', backEl.value); 
         }
     } catch(err) {
         alert("Tahmin başarısız oldu, internet bağlantını kontrol et.");
@@ -351,92 +369,58 @@ window.handleCSVUpload = (input) => {
         const text = e.target.result;
         const lines = text.split('\n');
         let addedCount = 0;
-        
         const csvRegex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
 
         lines.forEach(line => {
             if(!line.trim()) return;
             let parts = line.split(csvRegex);
-            
             if(parts.length >= 2) {
                 let front = parts[0].replace(/^"|"$/g, '').trim();
                 let back = parts[1].replace(/^"|"$/g, '').trim();
                 const isHeader = front.toLowerCase().includes('term') || front.toLowerCase().includes('soru');
-                
                 if(front && back && !isHeader) {
-                    selFolder.cards.push({
-                        id: Date.now().toString() + Math.random().toString().substring(2, 6), 
-                        front, back, image: null
-                    });
+                    selFolder.cards.push({ id: Date.now().toString() + Math.random().toString().substring(2, 6), front, back, image: null });
                     addedCount++;
                 }
             }
         });
-        
-        if(addedCount > 0) {
-            await setDoc(docRef, {folders});
-            renderEditor();
-            alert(`${addedCount} kart dosyadan başarıyla eklendi!`);
-        } else {
-            alert("CSV formatı anlaşılamadı. 'Terim,Tanım' şeklinde olduğundan emin ol.");
-        }
+        if(addedCount > 0) { await setDoc(docRef, {folders}); renderEditor(); alert(`${addedCount} kart dosyadan eklendi!`); } 
+        else { alert("CSV formatı anlaşılamadı. 'Terim,Tanım' şeklinde olduğundan emin ol."); }
         input.value = '';
     };
     reader.readAsText(file);
 };
 
-window.addNewEmptyCard = async () => {
-    selFolder.cards.push({ id: Date.now().toString(), front: '', back: '', image: null });
-    renderEditor(); await setDoc(docRef, {folders});
-};
-
-window.updateCardText = async (cardId, field, value) => {
-    const card = selFolder.cards.find(c => c.id === cardId);
-    if(card) { card[field] = value; await setDoc(docRef, {folders}); }
-};
-
-window.deleteCard = async (cardId) => {
-    selFolder.cards = selFolder.cards.filter(c => c.id !== cardId);
-    renderEditor(); await setDoc(docRef, {folders});
-};
-
+window.addNewEmptyCard = async () => { selFolder.cards.push({ id: Date.now().toString(), front: '', back: '', image: null }); renderEditor(); await setDoc(docRef, {folders}); };
+window.updateCardText = async (cardId, field, value) => { const card = selFolder.cards.find(c => c.id === cardId); if(card) { card[field] = value; await setDoc(docRef, {folders}); } };
+window.deleteCard = async (cardId) => { selFolder.cards = selFolder.cards.filter(c => c.id !== cardId); renderEditor(); await setDoc(docRef, {folders}); };
 window.uploadImage = async (cardId, inputEl) => {
     const file = inputEl.files[0]; if(!file) return;
-    const card = selFolder.cards.find(c => c.id === cardId);
-    if(!card) return;
-    
+    const card = selFolder.cards.find(c => c.id === cardId); if(!card) return;
     const reader = new FileReader();
     reader.onload = (e) => { card.image = e.target.result; renderEditor(); };
     reader.readAsDataURL(file);
-
     try {
         const sRef = ref(storage, `users/${currentUser.uid}/${cardId}_${Date.now()}`);
         await uploadBytes(sRef, file);
         card.image = await getDownloadURL(sRef);
-        await setDoc(docRef, {folders});
-        renderEditor();
+        await setDoc(docRef, {folders}); renderEditor();
     } catch(err) { alert("Resim yüklenemedi."); }
 };
 
-// Akıllı Çalışma Mantığı & Karıştırma & Skor Takibi
+// --- ÇALIŞMA MODU VE TTS (TEXT-TO-SPEECH) ---
 window.startStudy = () => {
   const validCards = selFolder.cards.filter(c => c.front.trim() !== '' && c.back.trim() !== '');
   if(validCards.length === 0) return alert("Çalışılacak geçerli (dolu) kart yok!");
-  
   roundQueue = [...validCards].sort(() => Math.random() - 0.5);
-  wrongPile = []; qIdx = 0;
-  sessionRight = 0; sessionWrong = 0; // Skorları sıfırla
-  updateScoreBoard();
-  
-  showPage('study'); loadCard();
+  wrongPile = []; qIdx = 0; sessionRight = 0; sessionWrong = 0; 
+  updateScoreBoard(); showPage('study'); loadCard();
 };
 
 window.shuffleStudyDeck = () => {
-    const remaining = roundQueue.slice(qIdx);
-    remaining.sort(() => Math.random() - 0.5);
+    const remaining = roundQueue.slice(qIdx); remaining.sort(() => Math.random() - 0.5);
     roundQueue = [...roundQueue.slice(0, qIdx), ...remaining];
-    alert("Kalan kartlar yeniden karıştırıldı! 🔀");
-    loadCard();
+    alert("Kalan kartlar yeniden karıştırıldı! 🔀"); loadCard();
 };
 
 function updateScoreBoard() {
@@ -448,62 +432,52 @@ function loadCard() {
   document.getElementById('s-progress').textContent = `${qIdx + 1} / ${roundQueue.length}`;
   const c = roundQueue[qIdx];
   const img = document.getElementById('s-img');
-  
-  img.style.display = c.image ? 'block' : 'none';
-  if(c.image) img.src = c.image;
+  img.style.display = c.image ? 'block' : 'none'; if(c.image) img.src = c.image;
   
   document.getElementById('s-text').textContent = c.front;
   document.getElementById('s-hint').textContent = "Cevabı görmek için tıkla";
   document.getElementById('s-action-row').style.display = 'none';
-  hasRevealedOnce = false; // Yeni karta geçince buton saklama durumunu sıfırla
+  hasRevealedOnce = false; 
 }
 
-// Çift Yönlü Çevirme Mantığı (Toggle)
 window.handleCardClick = () => {
   const c = roundQueue[qIdx];
   const textEl = document.getElementById('s-text');
   const hintEl = document.getElementById('s-hint');
-
-  // Arka yüzü İLK defa gördüğünde butonlar çıksın ve bir daha kaybolmasın
-  if(!hasRevealedOnce) {
-      hasRevealedOnce = true;
-      document.getElementById('s-action-row').style.display = 'flex';
-  }
-
-  // Eğer ekranda ön yüz varsa arkayı göster, arka varsa önü göster.
+  if(!hasRevealedOnce) { hasRevealedOnce = true; document.getElementById('s-action-row').style.display = 'flex'; }
   if(textEl.textContent === c.front) {
-      textEl.textContent = c.back;
-      hintEl.textContent = "Ön yüze dönmek için tekrar tıkla";
+      textEl.textContent = c.back; hintEl.textContent = "Ön yüze dönmek için tekrar tıkla";
   } else {
-      textEl.textContent = c.front;
-      hintEl.textContent = "Arka yüze dönmek için tekrar tıkla";
+      textEl.textContent = c.front; hintEl.textContent = "Arka yüze dönmek için tekrar tıkla";
   }
 };
 
 window.markCard = (correct) => {
-  event.stopPropagation(); // Butona tıklarken kartın arkaya dönmesini engelle
-  
-  if(!correct) {
-      wrongPile.push(roundQueue[qIdx]);
-      sessionWrong++;
-  } else {
-      sessionRight++;
-  }
-  updateScoreBoard();
-  
-  qIdx++;
+  event.stopPropagation(); 
+  if(!correct) { wrongPile.push(roundQueue[qIdx]); sessionWrong++; } else { sessionRight++; }
+  updateScoreBoard(); qIdx++;
   if(qIdx >= roundQueue.length) {
       if(wrongPile.length > 0) {
           alert(`İlk tur bitti! Sadece bilemediğin ${wrongPile.length} kart ile yeniden başlıyoruz.`);
-          roundQueue = [...wrongPile].sort(() => Math.random() - 0.5);
-          wrongPile = []; qIdx = 0; loadCard();
-      } else {
-          alert("Tebrikler! Seti tamamen öğrendin.");
-          goFolder();
-      }
-  } else {
-      loadCard();
-  }
+          roundQueue = [...wrongPile].sort(() => Math.random() - 0.5); wrongPile = []; qIdx = 0; loadCard();
+      } else { alert("Tebrikler! Seti tamamen öğrendin."); goFolder(); }
+  } else { loadCard(); }
+};
+
+// TTS Fonksiyonu
+window.playAudio = (event) => {
+    event.stopPropagation(); // Kartın dönmesini engeller
+    const textToRead = document.getElementById('s-text').textContent;
+    const selectedLang = document.getElementById('tts-lang').value;
+    
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(textToRead);
+        utterance.lang = selectedLang;
+        utterance.rate = 0.9; // Biraz daha anlaşılır olması için hızı %10 düşürdüm
+        window.speechSynthesis.speak(utterance);
+    } else {
+        alert("Tarayıcınız sesli okuma özelliğini desteklemiyor.");
+    }
 };
 
 // Globals
