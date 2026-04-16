@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Öğrenme Merkezi | Pro Mode v5</title>
+<title>Öğrenme Merkezi | Pro Mode v6</title>
 <style>
 :root {
   --bg: #f6f7fb; --text: #0a092d; --card-bg: #ffffff; --border: #e1e5ee;
@@ -67,7 +67,7 @@ input:focus, textarea:focus { border-color: var(--accent); }
 .ai-btn:hover { opacity: 0.8; }
 
 /* Çalışma Ekranı */
-.card-slide{ background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:2.5rem 1.5rem; text-align:center; min-height:400px; display:flex; flex-direction:column; align-items:center; justify-content:center; position: relative; transition: transform 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.08); touch-action: none;}
+.card-slide{ background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:2.5rem 1.5rem; text-align:center; min-height:400px; display:flex; flex-direction:column; align-items:center; justify-content:center; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.08); touch-action: none;}
 .study-img{ max-width:100%; max-height:220px; border-radius:12px; margin-bottom:24px; object-fit:contain; }
 .study-word{ font-size:32px; font-weight:700; word-break: break-word; white-space: pre-wrap; }
 
@@ -139,9 +139,9 @@ input:focus, textarea:focus { border-color: var(--accent); }
           <img class="study-img" id="s-img" style="display:none" />
           <div class="study-word" id="s-text"></div>
           <div id="write-container" style="display:none; width:100%;"><input type="text" id="write-input" style="width:80%; margin:20px auto; display:block; text-align:center; font-size:18px; border-radius:12px; border:2px solid var(--border); background:var(--input-bg); color:var(--text); padding:10px; outline:none;" placeholder="Cevabı yaz..." autocomplete="off" /></div>
-          <div style="font-size:13px; color:var(--sub-text); margin-top: 20px" id="s-hint">Dokun veya Kaydır</div>
+          <div style="font-size:13px; color:var(--sub-text); margin-top: 20px" id="s-hint">Çevirmek için dokun</div>
       </div>
-      <div id="s-action-row" style="display:none; gap:15px; margin-top:25px; justify-content:center">
+      <div id="s-action-row" style="display:flex; gap:15px; margin-top:25px; justify-content:center">
         <button class="btn btn-danger" style="flex:1" onclick="appMarkCard(false)">Bilemedim</button>
         <button class="btn btn-filled" style="flex:1; background:var(--success)" onclick="appMarkCard(true)">Bildim</button>
       </div>
@@ -152,18 +152,26 @@ input:focus, textarea:focus { border-color: var(--accent); }
   </div>
 </div>
 
+<div id="img-opt-modal" class="modal-overlay">
+    <div class="modal-content" style="text-align:center; max-width: 350px;">
+        <img id="img-opt-preview" style="max-width:100%; max-height:250px; border-radius:12px; margin-bottom:15px; object-fit:contain; background:var(--bg)" />
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-danger" style="flex:1" onclick="appRemoveImage()">Sil</button>
+            <button class="btn btn-filled" style="flex:2" onclick="appTriggerImageUpload()">Yeni Yükle</button>
+        </div>
+        <button class="btn" style="width:100%; margin-top:10px" onclick="document.getElementById('img-opt-modal').style.display='none'">Kapat</button>
+    </div>
+</div>
+
 <div id="bulk-modal" class="modal-overlay">
     <div class="modal-content">
         <h3 style="margin-bottom:10px">📥 Toplu Kart Ekle</h3>
         <p style="font-size:12px; color:var(--sub-text); margin-bottom:15px">NotebookLM .csv dosyanı seçebilir veya kelimeleri kutuya yapıştırabilirsin.</p>
-        
         <div style="display:flex; gap:10px; margin-bottom:15px">
             <button class="btn" style="flex:1" onclick="document.getElementById('csv-upload-input').click()">📄 CSV Dosyası Yükle</button>
             <input type="file" id="csv-upload-input" accept=".csv" style="display:none" onchange="appHandleCSVUpload(this)" />
         </div>
-        
         <textarea id="bulk-text-input" style="height:120px; margin-bottom:15px; font-size:13px" placeholder="Veya metin olarak yapıştır...&#10;Örnek:&#10;Apfel = Elma&#10;Buch - Kitap"></textarea>
-        
         <div style="display:flex; gap:10px;">
             <button class="btn" style="flex:1" onclick="document.getElementById('bulk-modal').style.display='none'">İptal</button>
             <button class="btn btn-filled" style="flex:1" onclick="appHandleTextBulkAdd()">Hepsini Ekle</button>
@@ -211,16 +219,21 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Çevrimdışı senkronizasyon (Offline Persistence) aktif!
 enableIndexedDbPersistence(db).catch(() => {}); 
 
 const auth = getAuth(app);
 const storage = getStorage(app);
 
 let currentUser, docRef, folders = [], userStats = {}, roundQueue = [], qIdx = 0, isWriteMode = false;
-let sessionRight = 0, sessionWrong = 0, hasRevealedOnce = false, isReg = false, selFolder = null;
+let sessionRight = 0, sessionWrong = 0, hasRevealedOnce = false, isReg = false, selFolder = null, currentImgCardId = null;
 
 const hideLoader = () => { document.getElementById('app-loading').style.display = 'none'; };
+
+// Akıllı Çıkarıcı (Regex) - Tırnak içini yakalar
+const extractTarget = (text) => {
+    const match = text.match(/["'](.*?)["']/);
+    return match ? match[1].trim() : text.trim();
+};
 
 onAuthStateChanged(auth, user => {
   if (user) {
@@ -238,12 +251,12 @@ onAuthStateChanged(auth, user => {
   } else { hideLoader(); window.appShowPage('auth'); }
 });
 
-// Sayfa Navigasyon ve Modallar
 window.appShowPage = id => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-new-folder').style.display = 'none';
     document.getElementById('dict-modal').style.display = 'none';
     document.getElementById('bulk-modal').style.display = 'none';
+    document.getElementById('img-opt-modal').style.display = 'none';
     const target = document.getElementById('page-' + id);
     if(target) target.classList.add('active');
     else if (id === 'new-folder') document.getElementById('page-new-folder').style.display = 'flex';
@@ -264,7 +277,6 @@ if(localStorage.getItem('dark-mode') === 'true') document.body.classList.add('da
 window.appGoHome = () => window.appShowPage('home');
 window.appGoFolder = () => window.appShowPage('folder');
 
-// Klasör Operasyonları
 window.appCreateFolder = async () => {
     const n = document.getElementById('nf-name').value; if(!n) return;
     folders.unshift({id: "set_" + Date.now(), name: n, cards: []});
@@ -304,7 +316,7 @@ window.appRenderEditor = () => {
         <button onclick="appOpenDictionary('${c.id}')" style="background:none; border:none; position:absolute; right:95px; bottom:22px; cursor:pointer; font-size:20px" title="Sözlük">📖</button>
       </div>
       <div style="display:flex; flex-direction:column; gap:6px; align-items:center; width: 60px">
-        <div onclick="document.getElementById('file-${c.id}').click()" style="width:60px; height:60px; border:1px dashed var(--border); border-radius:8px; cursor:pointer; overflow:hidden; display:flex; justify-content:center; align-items:center; background:var(--input-bg)">
+        <div onclick="appHandleImageClick('${c.id}')" style="width:60px; height:60px; border:1px dashed var(--border); border-radius:8px; cursor:pointer; overflow:hidden; display:flex; justify-content:center; align-items:center; background:var(--input-bg)">
             ${c.image ? `<img src="${c.image}" style="width:100%; height:100%; object-fit:cover" />` : `<span style="font-size:24px">🖼️</span>`}
         </div>
         <button class="ai-btn" onclick="appGenerateAIImage('${c.id}')" title="Yapay Zeka ile Görsel Üret">✨ Çiz</button>
@@ -319,18 +331,36 @@ window.appUpdateCard = async (id, f, v) => { const c = selFolder.cards.find(x =>
 window.appDeleteCard = async (id) => { if(confirm("Kart silinsin mi?")) { selFolder.cards = selFolder.cards.filter(x => x.id !== id); appRenderEditor(); await setDoc(docRef, {folders, stats: userStats}); } };
 window.appAddNewEmptyCard = async () => { selFolder.cards.push({ id: "c_" + Date.now(), front: '', back: '', reps: 0, interval: 0, ease: 2.5 }); appRenderEditor(); await setDoc(docRef, {folders, stats: userStats}); };
 
-// Yapay Zeka Çizim
+// Görsel Asistanı ve Yönetimi
+window.appHandleImageClick = (id) => {
+    const c = selFolder.cards.find(x => x.id === id);
+    if(c && c.image) {
+        currentImgCardId = id;
+        document.getElementById('img-opt-preview').src = c.image;
+        document.getElementById('img-opt-modal').style.display = 'flex';
+    } else { document.getElementById('file-'+id).click(); }
+};
+window.appTriggerImageUpload = () => { document.getElementById('img-opt-modal').style.display = 'none'; document.getElementById('file-'+currentImgCardId).click(); };
+window.appRemoveImage = async () => {
+    const c = selFolder.cards.find(x => x.id === currentImgCardId);
+    if(c) { c.image = null; await setDoc(docRef, {folders, stats: userStats}); appRenderEditor(); }
+    document.getElementById('img-opt-modal').style.display = 'none';
+};
+
 window.appGenerateAIImage = async (id) => {
     const input = document.getElementById(`front-${id}`);
-    const word = input ? input.value.trim() : "";
-    if(!word) return alert("Önce kelimeyi yazmalısın.");
+    const wordRaw = input ? input.value : "";
+    if(!wordRaw) return alert("Önce kelimeyi yazmalısın.");
+    
+    // Tırnak içini alır, eğitim için prompt'u optimize eder
+    const word = extractTarget(wordRaw);
     const c = selFolder.cards.find(x => x.id === id);
     if(!c) return;
     
     c.image = "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif";
     appRenderEditor();
     
-    const prompt = encodeURIComponent(word + ", single object, isolated on solid white background, high quality, clear, educational illustration");
+    const prompt = encodeURIComponent(word + ", educational illustration, clean white background, high quality, vector art");
     const aiUrl = `https://image.pollinations.ai/prompt/${prompt}?width=400&height=400&nologo=true&seed=${Math.random()}`;
     
     c.image = aiUrl;
@@ -345,7 +375,7 @@ window.appUploadImage = async (id, input) => {
     const c = selFolder.cards.find(x => x.id === id); c.image = url; appRenderEditor(); await setDoc(docRef, {folders, stats: userStats});
 };
 
-// -- GÜÇLENDİRİLMİŞ TOPLU EKLEME (CSV & METİN) --
+// Toplu Ekleme
 window.appHandleCSVUpload = (input) => {
     const file = input.files[0]; if(!file) return;
     const reader = new FileReader();
@@ -353,10 +383,8 @@ window.appHandleCSVUpload = (input) => {
         const lines = e.target.result.split(/\r?\n/); let count = 0;
         lines.forEach(line => {
             if(!line.trim()) return;
-            // Virgül, noktalı virgül veya tab ayrımını anla
             let p = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)|;/);
             if(p.length < 2) p = line.split('\t'); 
-            
             if(p.length >= 2) {
                 let f = p[0].replace(/^"|"$/g, '').trim(), b = p[1].replace(/^"|"$/g, '').trim();
                 if(f && b && !f.toLowerCase().includes('term') && !f.toLowerCase().includes('ön yüz')) {
@@ -364,47 +392,30 @@ window.appHandleCSVUpload = (input) => {
                 }
             }
         });
-        if(count > 0) { 
-            await setDoc(docRef, {folders, stats: userStats}); appRenderEditor(); 
-            document.getElementById('bulk-modal').style.display='none';
-            alert(`${count} kart başarıyla eklendi!`); 
-        } else {
-            alert("Dosya formatı anlaşılamadı. 'Kelime, Anlam' şeklinde olduğundan emin ol.");
-        }
+        if(count > 0) { await setDoc(docRef, {folders, stats: userStats}); appRenderEditor(); document.getElementById('bulk-modal').style.display='none'; alert(`${count} kart eklendi!`); } 
         input.value = '';
     };
     reader.readAsText(file);
 };
-
 window.appHandleTextBulkAdd = async () => {
     const text = document.getElementById('bulk-text-input').value;
     const lines = text.split(/\r?\n/); let count = 0;
     lines.forEach(line => {
         if(!line.trim()) return;
-        // = veya - veya tab ile ayrılmış verileri yakala
         let p = line.split(/\s*=\s*|\s*-\s*|\t/);
         if(p.length >= 2) {
             let f = p[0].trim(), b = p[1].trim();
-            if(f && b) {
-                selFolder.cards.push({ id: "c_"+Date.now()+Math.random(), front: f, back: b, reps: 0, interval: 0, ease: 2.5 }); count++;
-            }
+            if(f && b) { selFolder.cards.push({ id: "c_"+Date.now()+Math.random(), front: f, back: b, reps: 0, interval: 0, ease: 2.5 }); count++; }
         }
     });
-    
-    if(count > 0) {
-        await setDoc(docRef, {folders, stats: userStats}); appRenderEditor();
-        document.getElementById('bulk-text-input').value = '';
-        document.getElementById('bulk-modal').style.display='none';
-        alert(`${count} kart başarıyla eklendi!`);
-    } else {
-        alert("Format hatalı. Lütfen 'Kelime = Anlam' veya 'Kelime - Anlam' şeklinde dene.");
-    }
+    if(count > 0) { await setDoc(docRef, {folders, stats: userStats}); appRenderEditor(); document.getElementById('bulk-text-input').value = ''; document.getElementById('bulk-modal').style.display='none'; alert(`${count} kart eklendi!`); } 
 };
 
 // Sözlük Asistanı
 window.appOpenDictionary = (id) => {
     document.getElementById('dict-card-id').value = id;
-    document.getElementById('dict-word').value = document.getElementById(`front-${id}`).value;
+    // Tırnak içini algıla
+    document.getElementById('dict-word').value = extractTarget(document.getElementById(`front-${id}`).value);
     document.getElementById('dict-modal').style.display = 'flex';
 };
 window.appFetchDictionaryData = async () => {
@@ -422,7 +433,7 @@ window.appApplyDictionaryData = () => {
     document.getElementById('dict-modal').style.display = 'none';
 };
 
-// Çalışma ve FSRS Modülü
+// Çalışma ve Animasyon Modülü
 window.appStartStudy = () => {
   const now = Date.now();
   let due = selFolder.cards.filter(c => c.front && c.back && (!c.nextReview || c.nextReview <= now));
@@ -440,32 +451,51 @@ function loadCard() {
   document.getElementById('s-progress').textContent = `${qIdx + 1} / ${roundQueue.length}`;
   const img = document.getElementById('s-img');
   img.style.display = c.image ? 'block' : 'none'; if(c.image) img.src = c.image;
-  document.getElementById('s-action-row').style.display = 'none';
+  
+  // Aksiyon butonları her zaman açık (Yazma modu hariç)
+  document.getElementById('s-action-row').style.display = isWriteMode ? 'none' : 'flex';
+  
   hasRevealedOnce = false;
   document.getElementById('write-input').value = "";
   document.getElementById('write-input').classList.remove('success', 'error');
   document.getElementById('write-container').style.display = isWriteMode ? "block" : "none";
+  document.getElementById('s-hint').textContent = "Çevirmek için dokun veya butonları kullan";
 }
 
 window.appHandleCardClick = () => {
   if(isWriteMode) return;
-  if(!hasRevealedOnce) { hasRevealedOnce = true; document.getElementById('s-action-row').style.display = 'flex'; }
+  hasRevealedOnce = true;
   const c = roundQueue[qIdx];
   const t = document.getElementById('s-text');
   t.textContent = (t.textContent === c.front) ? c.back : c.front;
+  document.getElementById('s-hint').textContent = "Çevirmek için dokun";
 };
 
 window.appToggleWriteMode = () => { isWriteMode = !isWriteMode; loadCard(); };
 document.getElementById('write-input').addEventListener('keypress', e => {
     if(e.key === 'Enter') {
-        const correct = roundQueue[qIdx].back.split('\n')[0].trim().toLowerCase();
-        if(e.target.value.trim().toLowerCase() === correct) { e.target.classList.add('success'); setTimeout(()=>appMarkCard(true), 500); } 
-        else { e.target.classList.add('error'); hasRevealedOnce = true; document.getElementById('s-text').textContent = roundQueue[qIdx].back; document.getElementById('s-action-row').style.display = 'flex'; }
+        const correctRaw = roundQueue[qIdx].back.split('\n')[0].trim().toLowerCase();
+        // Yazma modunda NotebookLM tarzı tırnak içini algılar
+        const correct = extractTarget(correctRaw).toLowerCase();
+        const ans = e.target.value.trim().toLowerCase();
+        
+        hasRevealedOnce = true; document.getElementById('s-text').textContent = roundQueue[qIdx].back; 
+        document.getElementById('s-action-row').style.display = 'flex';
+        
+        if(ans === correct) { e.target.classList.add('success'); setTimeout(()=>appMarkCard(true), 600); } 
+        else { e.target.classList.add('error'); }
     }
 });
 
 window.appMarkCard = async (correct) => {
   if(event) event.stopPropagation();
+  
+  const container = document.getElementById('card-container');
+  // Dışarı kayma animasyonu (arka yüzüyle kayar)
+  container.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+  container.style.transform = correct ? 'translateX(100vw) rotate(15deg)' : 'translateX(-100vw) rotate(-15deg)';
+  container.style.opacity = '0';
+
   const c = selFolder.cards.find(x => x.id === roundQueue[qIdx].id);
   if(!c.reps) { c.reps = 0; c.interval = 1; c.ease = 2.5; }
   if(correct) { sessionRight++; c.reps++; c.interval = (c.reps === 1) ? 1 : (c.reps === 2 ? 6 : Math.round(c.interval * c.ease)); }
@@ -473,11 +503,38 @@ window.appMarkCard = async (correct) => {
   c.nextReview = Date.now() + (c.interval * 86400000);
   const today = new Date().toISOString().split('T')[0]; userStats[today] = (userStats[today] || 0) + 1;
   document.getElementById('score-right').textContent = sessionRight; document.getElementById('score-wrong').textContent = sessionWrong;
-  qIdx++;
-  if(qIdx >= roundQueue.length) { await setDoc(docRef, {folders, stats: userStats}); window.appGoFolder(); } else loadCard();
+  
+  setTimeout(async () => {
+      qIdx++;
+      if(qIdx >= roundQueue.length) { 
+          await setDoc(docRef, {folders, stats: userStats}); window.appGoFolder(); 
+          container.style.transition = 'none'; container.style.transform = 'translateX(0) rotate(0)'; container.style.opacity = '1';
+      } 
+      else { 
+          loadCard(); // loadCard metni değiştirir (ön yüze çevirir)
+          
+          // Yeni kart görünmez şekilde ters tarafa yerleşir
+          container.style.transition = 'none';
+          container.style.transform = correct ? 'translateX(-50px) rotate(-5deg)' : 'translateX(50px) rotate(5deg)';
+          
+          // Animasyonla içeri girer (sadece ön yüz görünür)
+          setTimeout(() => {
+              container.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+              container.style.transform = 'translateX(0) rotate(0)';
+              container.style.opacity = '1';
+          }, 50);
+      }
+  }, 300); // 300ms animasyon süresi
 };
 
-window.appPlayAudio = (e) => { e.stopPropagation(); const u = new SpeechSynthesisUtterance(document.getElementById('s-text').textContent); u.lang = document.getElementById('tts-lang').value; window.speechSynthesis.speak(u); };
+window.appPlayAudio = (e) => { 
+    e.stopPropagation(); 
+    // Ses okuyucu da tırnak içini okur
+    const text = extractTarget(document.getElementById('s-text').textContent);
+    const u = new SpeechSynthesisUtterance(text); 
+    u.lang = document.getElementById('tts-lang').value; 
+    window.speechSynthesis.speak(u); 
+};
 
 function renderHeatmap() {
     const g = document.getElementById('heatmap-grid'); g.innerHTML = "";
@@ -494,7 +551,7 @@ function renderHeatmap() {
 let tStart = 0;
 document.getElementById('card-container').addEventListener('touchstart', e => tStart = e.changedTouches[0].screenX, {passive:true});
 document.getElementById('card-container').addEventListener('touchend', e => {
-    if(isWriteMode || !hasRevealedOnce) return;
+    if(isWriteMode) return;
     const diff = e.changedTouches[0].screenX - tStart;
     if(diff > 70) appMarkCard(true); if(diff < -70) appMarkCard(false);
 });
