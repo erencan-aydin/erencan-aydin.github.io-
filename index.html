@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Öğrenme Merkezi | Pro Mode v7</title>
+<title>Öğrenme Merkezi | Pro Mode v7.1</title>
 <style>
 :root {
   --bg: #f6f7fb; --text: #0a092d; --card-bg: #ffffff; --border: #e1e5ee;
@@ -184,7 +184,10 @@ input:focus, textarea:focus { border-color: var(--accent); }
         <h3 style="margin-bottom:15px">📖 Sözlük Asistanı</h3>
         <input type="hidden" id="dict-card-id" /><input type="text" id="dict-word" style="font-weight:700; margin:15px 0" />
         <select id="dict-lang" style="margin-bottom:15px">
-            <option value="en">🇬🇧 İngilizce</option><option value="de">🇩🇪 Almanca</option><option value="zh">🇨🇳 Çince</option>
+            <option value="tr">🇹🇷 Türkçe'ye Çevir</option>
+            <option value="en">🇬🇧 İngilizce'ye Çevir</option>
+            <option value="de">🇩🇪 Almanca'ya Çevir</option>
+            <option value="zh">🇨🇳 Çince'ye Çevir</option>
         </select>
         <button class="btn btn-filled" style="width:100%; margin-bottom:15px" onclick="appFetchDictionaryData()">Ara</button>
         <div id="dict-results" style="display:none; background:var(--bg); padding:10px; border-radius:8px; margin-bottom:15px;">
@@ -310,10 +313,13 @@ window.appRenderFolders = () => {
 window.appRenderEditor = () => {
   document.getElementById('editor-list').innerHTML = selFolder.cards.map(c => `
     <div style="background:var(--card-bg); padding:15px; border-radius:12px; margin-bottom:10px; border:1px solid var(--border); display:flex; gap:15px; position:relative">
-      <div style="flex:1">
+      <div style="flex:1; position:relative">
         <input type="text" id="front-${c.id}" value="${c.front}" onchange="appUpdateCard('${c.id}', 'front', this.value)" style="margin-bottom:8px; font-weight:600" placeholder="Ön yüz (Kelime)" />
         <textarea id="back-${c.id}" onchange="appUpdateCard('${c.id}', 'back', this.value)" style="height:44px" placeholder="Arka yüz (Anlamı)">${c.back}</textarea>
-        <button onclick="appOpenDictionary('${c.id}')" style="background:none; border:none; position:absolute; right:95px; bottom:22px; cursor:pointer; font-size:20px" title="Sözlük">📖</button>
+        <div style="position:absolute; right:10px; bottom:15px; display:flex; gap:5px;">
+            <button onclick="appSmartPredict('${c.id}')" style="background:none; border:none; cursor:pointer; font-size:20px" title="Hızlı Tahmin (İngilizce)">🪄</button>
+            <button onclick="appOpenDictionary('${c.id}')" style="background:none; border:none; cursor:pointer; font-size:20px" title="Sözlük Asistanı">📖</button>
+        </div>
       </div>
       <div style="display:flex; flex-direction:column; gap:6px; align-items:center; width: 60px">
         <div onclick="appHandleImageClick('${c.id}')" style="width:60px; height:60px; border:1px dashed var(--border); border-radius:8px; cursor:pointer; overflow:hidden; display:flex; justify-content:center; align-items:center; background:var(--input-bg)">
@@ -330,6 +336,25 @@ window.appRenderEditor = () => {
 window.appUpdateCard = async (id, f, v) => { const c = selFolder.cards.find(x => x.id === id); if(c) { c[f] = v; await setDoc(docRef, {folders, stats: userStats}); } };
 window.appDeleteCard = async (id) => { if(confirm("Kart silinsin mi?")) { selFolder.cards = selFolder.cards.filter(x => x.id !== id); appRenderEditor(); await setDoc(docRef, {folders, stats: userStats}); } };
 window.appAddNewEmptyCard = async () => { selFolder.cards.push({ id: "c_" + Date.now(), front: '', back: '', reps: 0, interval: 0, ease: 2.5 }); appRenderEditor(); await setDoc(docRef, {folders, stats: userStats}); };
+
+// Hızlı Tahmin (İngilizceye)
+window.appSmartPredict = async (id) => {
+    const frontInput = document.getElementById(`front-${id}`);
+    const wordRaw = frontInput ? frontInput.value : "";
+    const word = extractTarget(wordRaw);
+    if(!word) return alert("Önce sol tarafa kelime yazmalısın.");
+    const backInput = document.getElementById(`back-${id}`);
+    backInput.placeholder = "Çevriliyor...";
+    backInput.value = "";
+    try {
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=Autodetect|en`);
+        const data = await res.json();
+        if(data?.responseData?.translatedText) {
+            backInput.value = data.responseData.translatedText;
+            appUpdateCard(id, 'back', backInput.value);
+        }
+    } catch(e) { alert("Tahmin başarısız."); }
+};
 
 // Görsel Asistanı ve Yönetimi
 window.appHandleImageClick = (id) => {
@@ -351,17 +376,13 @@ window.appGenerateAIImage = async (id) => {
     const input = document.getElementById(`front-${id}`);
     const wordRaw = input ? input.value : "";
     if(!wordRaw) return alert("Önce kelimeyi yazmalısın.");
-    
     const word = extractTarget(wordRaw);
     const c = selFolder.cards.find(x => x.id === id);
     if(!c) return;
-    
     c.image = "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif";
     appRenderEditor();
-    
     const prompt = encodeURIComponent(word + ", educational illustration, clean white background, high quality, vector art");
     const aiUrl = `https://image.pollinations.ai/prompt/${prompt}?width=400&height=400&nologo=true&seed=${Math.random()}`;
-    
     c.image = aiUrl;
     await setDoc(docRef, {folders, stats: userStats});
     appRenderEditor();
@@ -417,10 +438,10 @@ window.appOpenDictionary = (id) => {
     document.getElementById('dict-modal').style.display = 'flex';
 };
 window.appFetchDictionaryData = async () => {
-    const w = document.getElementById('dict-word').value, l = document.getElementById('dict-lang').value;
+    const w = document.getElementById('dict-word').value, targetLang = document.getElementById('dict-lang').value;
     document.getElementById('dict-results').style.display = 'block'; document.getElementById('dict-meaning').textContent = "Aranıyor...";
     try {
-        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(w)}&langpair=${l}|tr`);
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(w)}&langpair=Autodetect|${targetLang}`);
         const data = await res.json(); document.getElementById('dict-meaning').textContent = data.responseData.translatedText;
     } catch(e) { document.getElementById('dict-meaning').textContent = "Hata oluştu."; }
 };
@@ -461,19 +482,17 @@ function loadCard() {
 
 window.appHandleCardClick = () => {
   if(isWriteMode) return;
-  if(!hasRevealedOnce) { hasRevealedOnce = true; document.getElementById('s-action-row').style.display = 'flex'; }
+  hasRevealedOnce = true;
   const c = roundQueue[qIdx];
   const t = document.getElementById('s-text');
   const container = document.getElementById('card-container');
   
-  // Y Ekseninde 3 Boyutlu Flip Animasyonu
   container.style.transition = 'transform 0.15s ease-in';
   container.style.transform = 'perspective(800px) rotateY(90deg)';
   
   setTimeout(() => {
       t.textContent = (t.textContent === c.front) ? c.back : c.front;
       document.getElementById('s-hint').textContent = "Çevirmek için dokun";
-      
       container.style.transition = 'transform 0.15s ease-out';
       container.style.transform = 'perspective(800px) rotateY(0deg)';
   }, 150);
