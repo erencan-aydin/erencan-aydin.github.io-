@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Öğrenme Merkezi | Pro Mode v4</title>
+<title>Öğrenme Merkezi | Pro Mode v5</title>
 <style>
 :root {
   --bg: #f6f7fb; --text: #0a092d; --card-bg: #ffffff; --border: #e1e5ee;
@@ -63,7 +63,7 @@ input:focus, textarea:focus { border-color: var(--accent); }
 .badge-due { background: var(--warn); color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
 
 /* Editör Görsel Butonları */
-.ai-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer; width: 100%; transition: opacity 0.2s; }
+.ai-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer; width: 100%; transition: opacity 0.2s; margin-top: 4px; }
 .ai-btn:hover { opacity: 0.8; }
 
 /* Çalışma Ekranı */
@@ -111,10 +111,11 @@ input:focus, textarea:focus { border-color: var(--accent); }
   <div class="topbar"><div onclick="appGoHome()" style="cursor:pointer; font-weight: 600">← Geri Dön</div><button class="btn btn-filled" onclick="appStartStudy()">Çalışmaya Başla</button></div>
   <div style="display:flex; justify-content:space-between; align-items:center; margin: 20px 0;">
       <h2 id="fh-title"></h2>
-      <button class="icon-btn" style="color:var(--danger)" onclick="appDeleteFolder()">🗑️</button>
+      <div style="display:flex; gap:10px;">
+          <button class="btn" onclick="document.getElementById('bulk-modal').style.display='flex'">📥 Toplu Ekle</button>
+          <button class="icon-btn" style="color:var(--danger)" onclick="appDeleteFolder()">🗑️</button>
+      </div>
   </div>
-  <div style="display:flex; justify-content:flex-end; margin-bottom: 15px;"><button class="btn" onclick="document.getElementById('csv-upload').click()">📄 CSV İçe Aktar</button></div>
-  <input type="file" id="csv-upload" accept=".csv" style="display:none" onchange="appHandleCSVUpload(this)" />
   
   <div id="editor-list"></div>
   
@@ -149,6 +150,25 @@ input:focus, textarea:focus { border-color: var(--accent); }
           <span style="color:var(--danger)">✕ <span id="score-wrong">0</span></span>
       </div>
   </div>
+</div>
+
+<div id="bulk-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 style="margin-bottom:10px">📥 Toplu Kart Ekle</h3>
+        <p style="font-size:12px; color:var(--sub-text); margin-bottom:15px">NotebookLM .csv dosyanı seçebilir veya kelimeleri kutuya yapıştırabilirsin.</p>
+        
+        <div style="display:flex; gap:10px; margin-bottom:15px">
+            <button class="btn" style="flex:1" onclick="document.getElementById('csv-upload-input').click()">📄 CSV Dosyası Yükle</button>
+            <input type="file" id="csv-upload-input" accept=".csv" style="display:none" onchange="appHandleCSVUpload(this)" />
+        </div>
+        
+        <textarea id="bulk-text-input" style="height:120px; margin-bottom:15px; font-size:13px" placeholder="Veya metin olarak yapıştır...&#10;Örnek:&#10;Apfel = Elma&#10;Buch - Kitap"></textarea>
+        
+        <div style="display:flex; gap:10px;">
+            <button class="btn" style="flex:1" onclick="document.getElementById('bulk-modal').style.display='none'">İptal</button>
+            <button class="btn btn-filled" style="flex:1" onclick="appHandleTextBulkAdd()">Hepsini Ekle</button>
+        </div>
+    </div>
 </div>
 
 <div id="dict-modal" class="modal-overlay">
@@ -191,7 +211,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Çevrimdışı senkronizasyon (Offline Persistence) aktif ediliyor!
+// Çevrimdışı senkronizasyon (Offline Persistence) aktif!
 enableIndexedDbPersistence(db).catch(() => {}); 
 
 const auth = getAuth(app);
@@ -207,8 +227,6 @@ onAuthStateChanged(auth, user => {
     currentUser = user; docRef = doc(db, "users", user.uid);
     onSnapshot(docRef, snap => {
       hideLoader();
-      
-      // Senkronizasyon ışığı yeşile dönüyor!
       const syncDot = document.getElementById('sync-dot');
       if (syncDot) syncDot.classList.add('online');
 
@@ -220,11 +238,12 @@ onAuthStateChanged(auth, user => {
   } else { hideLoader(); window.appShowPage('auth'); }
 });
 
-// Sayfa Navigasyon
+// Sayfa Navigasyon ve Modallar
 window.appShowPage = id => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-new-folder').style.display = 'none';
     document.getElementById('dict-modal').style.display = 'none';
+    document.getElementById('bulk-modal').style.display = 'none';
     const target = document.getElementById('page-' + id);
     if(target) target.classList.add('active');
     else if (id === 'new-folder') document.getElementById('page-new-folder').style.display = 'flex';
@@ -326,24 +345,60 @@ window.appUploadImage = async (id, input) => {
     const c = selFolder.cards.find(x => x.id === id); c.image = url; appRenderEditor(); await setDoc(docRef, {folders, stats: userStats});
 };
 
+// -- GÜÇLENDİRİLMİŞ TOPLU EKLEME (CSV & METİN) --
 window.appHandleCSVUpload = (input) => {
     const file = input.files[0]; if(!file) return;
     const reader = new FileReader();
     reader.onload = async (e) => {
-        const lines = e.target.result.split('\n'); let count = 0; const regex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
+        const lines = e.target.result.split(/\r?\n/); let count = 0;
         lines.forEach(line => {
-            let p = line.split(regex);
+            if(!line.trim()) return;
+            // Virgül, noktalı virgül veya tab ayrımını anla
+            let p = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)|;/);
+            if(p.length < 2) p = line.split('\t'); 
+            
             if(p.length >= 2) {
                 let f = p[0].replace(/^"|"$/g, '').trim(), b = p[1].replace(/^"|"$/g, '').trim();
-                if(f && b && !f.toLowerCase().includes('term')) {
+                if(f && b && !f.toLowerCase().includes('term') && !f.toLowerCase().includes('ön yüz')) {
                     selFolder.cards.push({ id: "c_"+Date.now()+Math.random(), front: f, back: b, reps: 0, interval: 0, ease: 2.5 }); count++;
                 }
             }
         });
-        if(count > 0) { await setDoc(docRef, {folders, stats: userStats}); appRenderEditor(); alert(`${count} kart eklendi!`); }
+        if(count > 0) { 
+            await setDoc(docRef, {folders, stats: userStats}); appRenderEditor(); 
+            document.getElementById('bulk-modal').style.display='none';
+            alert(`${count} kart başarıyla eklendi!`); 
+        } else {
+            alert("Dosya formatı anlaşılamadı. 'Kelime, Anlam' şeklinde olduğundan emin ol.");
+        }
         input.value = '';
     };
     reader.readAsText(file);
+};
+
+window.appHandleTextBulkAdd = async () => {
+    const text = document.getElementById('bulk-text-input').value;
+    const lines = text.split(/\r?\n/); let count = 0;
+    lines.forEach(line => {
+        if(!line.trim()) return;
+        // = veya - veya tab ile ayrılmış verileri yakala
+        let p = line.split(/\s*=\s*|\s*-\s*|\t/);
+        if(p.length >= 2) {
+            let f = p[0].trim(), b = p[1].trim();
+            if(f && b) {
+                selFolder.cards.push({ id: "c_"+Date.now()+Math.random(), front: f, back: b, reps: 0, interval: 0, ease: 2.5 }); count++;
+            }
+        }
+    });
+    
+    if(count > 0) {
+        await setDoc(docRef, {folders, stats: userStats}); appRenderEditor();
+        document.getElementById('bulk-text-input').value = '';
+        document.getElementById('bulk-modal').style.display='none';
+        alert(`${count} kart başarıyla eklendi!`);
+    } else {
+        alert("Format hatalı. Lütfen 'Kelime = Anlam' veya 'Kelime - Anlam' şeklinde dene.");
+    }
 };
 
 // Sözlük Asistanı
