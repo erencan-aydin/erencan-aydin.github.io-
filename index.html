@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Öğrenme Merkezi | Pro Mode v6</title>
+<title>Öğrenme Merkezi | Pro Mode v7</title>
 <style>
 :root {
   --bg: #f6f7fb; --text: #0a092d; --card-bg: #ffffff; --border: #e1e5ee;
@@ -102,7 +102,7 @@ input:focus, textarea:focus { border-color: var(--accent); }
   </div>
   <div class="heatmap-container"><div class="heatmap-grid" id="heatmap-grid"></div></div>
   <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-      <h3 style="font-weight: 700;">Setlerin</h3><button class="btn btn-filled" onclick="appShowPage('new-folder')">+ Yeni Set</button>
+      <h3 style="font-weight: 700;">Setlerin</h3><button class="btn btn-filled" onclick="document.getElementById('page-new-folder').style.display='flex'">+ Yeni Set</button>
   </div>
   <div class="folder-grid" id="folder-grid"></div>
 </div>
@@ -229,7 +229,7 @@ let sessionRight = 0, sessionWrong = 0, hasRevealedOnce = false, isReg = false, 
 
 const hideLoader = () => { document.getElementById('app-loading').style.display = 'none'; };
 
-// Akıllı Çıkarıcı (Regex) - Tırnak içini yakalar
+// Akıllı Çıkarıcı (Regex)
 const extractTarget = (text) => {
     const match = text.match(/["'](.*?)["']/);
     return match ? match[1].trim() : text.trim();
@@ -259,7 +259,6 @@ window.appShowPage = id => {
     document.getElementById('img-opt-modal').style.display = 'none';
     const target = document.getElementById('page-' + id);
     if(target) target.classList.add('active');
-    else if (id === 'new-folder') document.getElementById('page-new-folder').style.display = 'flex';
 };
 
 window.appHandleAuth = async () => {
@@ -282,6 +281,7 @@ window.appCreateFolder = async () => {
     folders.unshift({id: "set_" + Date.now(), name: n, cards: []});
     await setDoc(docRef, {folders, stats: userStats});
     document.getElementById('nf-name').value = '';
+    document.getElementById('page-new-folder').style.display = 'none';
     window.appShowPage('home');
 };
 
@@ -352,7 +352,6 @@ window.appGenerateAIImage = async (id) => {
     const wordRaw = input ? input.value : "";
     if(!wordRaw) return alert("Önce kelimeyi yazmalısın.");
     
-    // Tırnak içini alır, eğitim için prompt'u optimize eder
     const word = extractTarget(wordRaw);
     const c = selFolder.cards.find(x => x.id === id);
     if(!c) return;
@@ -414,7 +413,6 @@ window.appHandleTextBulkAdd = async () => {
 // Sözlük Asistanı
 window.appOpenDictionary = (id) => {
     document.getElementById('dict-card-id').value = id;
-    // Tırnak içini algıla
     document.getElementById('dict-word').value = extractTarget(document.getElementById(`front-${id}`).value);
     document.getElementById('dict-modal').style.display = 'flex';
 };
@@ -452,7 +450,6 @@ function loadCard() {
   const img = document.getElementById('s-img');
   img.style.display = c.image ? 'block' : 'none'; if(c.image) img.src = c.image;
   
-  // Aksiyon butonları her zaman açık (Yazma modu hariç)
   document.getElementById('s-action-row').style.display = isWriteMode ? 'none' : 'flex';
   
   hasRevealedOnce = false;
@@ -464,18 +461,28 @@ function loadCard() {
 
 window.appHandleCardClick = () => {
   if(isWriteMode) return;
-  hasRevealedOnce = true;
+  if(!hasRevealedOnce) { hasRevealedOnce = true; document.getElementById('s-action-row').style.display = 'flex'; }
   const c = roundQueue[qIdx];
   const t = document.getElementById('s-text');
-  t.textContent = (t.textContent === c.front) ? c.back : c.front;
-  document.getElementById('s-hint').textContent = "Çevirmek için dokun";
+  const container = document.getElementById('card-container');
+  
+  // Y Ekseninde 3 Boyutlu Flip Animasyonu
+  container.style.transition = 'transform 0.15s ease-in';
+  container.style.transform = 'perspective(800px) rotateY(90deg)';
+  
+  setTimeout(() => {
+      t.textContent = (t.textContent === c.front) ? c.back : c.front;
+      document.getElementById('s-hint').textContent = "Çevirmek için dokun";
+      
+      container.style.transition = 'transform 0.15s ease-out';
+      container.style.transform = 'perspective(800px) rotateY(0deg)';
+  }, 150);
 };
 
 window.appToggleWriteMode = () => { isWriteMode = !isWriteMode; loadCard(); };
 document.getElementById('write-input').addEventListener('keypress', e => {
     if(e.key === 'Enter') {
         const correctRaw = roundQueue[qIdx].back.split('\n')[0].trim().toLowerCase();
-        // Yazma modunda NotebookLM tarzı tırnak içini algılar
         const correct = extractTarget(correctRaw).toLowerCase();
         const ans = e.target.value.trim().toLowerCase();
         
@@ -491,7 +498,6 @@ window.appMarkCard = async (correct) => {
   if(event) event.stopPropagation();
   
   const container = document.getElementById('card-container');
-  // Dışarı kayma animasyonu (arka yüzüyle kayar)
   container.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
   container.style.transform = correct ? 'translateX(100vw) rotate(15deg)' : 'translateX(-100vw) rotate(-15deg)';
   container.style.opacity = '0';
@@ -511,25 +517,20 @@ window.appMarkCard = async (correct) => {
           container.style.transition = 'none'; container.style.transform = 'translateX(0) rotate(0)'; container.style.opacity = '1';
       } 
       else { 
-          loadCard(); // loadCard metni değiştirir (ön yüze çevirir)
-          
-          // Yeni kart görünmez şekilde ters tarafa yerleşir
+          loadCard(); 
           container.style.transition = 'none';
           container.style.transform = correct ? 'translateX(-50px) rotate(-5deg)' : 'translateX(50px) rotate(5deg)';
-          
-          // Animasyonla içeri girer (sadece ön yüz görünür)
           setTimeout(() => {
               container.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
               container.style.transform = 'translateX(0) rotate(0)';
               container.style.opacity = '1';
           }, 50);
       }
-  }, 300); // 300ms animasyon süresi
+  }, 300);
 };
 
 window.appPlayAudio = (e) => { 
     e.stopPropagation(); 
-    // Ses okuyucu da tırnak içini okur
     const text = extractTarget(document.getElementById('s-text').textContent);
     const u = new SpeechSynthesisUtterance(text); 
     u.lang = document.getElementById('tts-lang').value; 
